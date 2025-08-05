@@ -1,3 +1,6 @@
+mod core;
+mod gui;
+
 fn main() {
-    println!("Hello, World!");
+    gui::launch::launch();
 }
