@@ -2,11 +2,12 @@ use crate::gui::launch::Cactus;
 
 use std::io::Cursor;
 
-use rodio::{OutputStream, OutputStreamBuilder};
+use rodio::OutputStream;
 
 pub static MOVE_SOUND: &[u8] = include_bytes!("../../assets/standard/Move.mp3");
 pub static CAPTURE_SOUND: &[u8] = include_bytes!("../../assets/standard/Capture.mp3");
-pub static CHECK_SOUND: &[u8] = include_bytes!("../../assets/standard/Check.mp3");
+pub static GAME_OVER_SOUND: &[u8] = include_bytes!("../../assets/standard/GenericNotify.mp3");
+pub static CONFIRMATION_SOUND: &[u8] = include_bytes!("../../assets/standard/Confirmation.mp3");
 
 impl Cactus {
     fn play(handle: &OutputStream, bytes: &'static [u8]) {
@@ -27,9 +28,15 @@ impl Cactus {
         }
     }
 
-    pub fn check_sound(&self) {
+    pub fn game_over_sound(&self) {
         if let Some(handle) = &self.audio_stream {
-            Self::play(handle, CHECK_SOUND);
+            Self::play(handle, GAME_OVER_SOUND);
+        }
+    }
+
+    pub fn confirmation_sound(&self) {
+        if let Some(handle) = &self.audio_stream {
+            Self::play(handle, CONFIRMATION_SOUND);
         }
     }
 }

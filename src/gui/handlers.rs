@@ -1,4 +1,7 @@
-use crate::{core::board::State, gui::launch::Cactus};
+use crate::{
+    core::{board::State, piece::PieceKind},
+    gui::launch::Cactus,
+};
 
 use eframe::egui::{Pos2, Response};
 
@@ -7,7 +10,7 @@ impl Cactus {
         if let Some((rank, file)) = self.get_square_at_pos(pos, response.rect) {
             if let Some(piece_kind) = self.board.piece_at((rank, file)) {
                 if let State::Playing { turn } = self.board.state {
-                    if turn.color != piece_kind.color() {
+                    if turn != piece_kind.color() {
                         return;
                     }
                 }
@@ -33,17 +36,42 @@ impl Cactus {
             self.board
                 .set_piece((orig_rank, orig_file), Some(piece_kind));
 
-            if self.board.is_move_legal(
-                (orig_rank, orig_file),
-                (target_rank, target_file),
-            ) {
-                match self
-                    .board
-                    .move_piece((orig_rank, orig_file), (target_rank, target_file))
-                {
-                    Ok(_) => {
-                        self.board.play_turn();
-                        self.move_sound();
+            let needs_promotion = match piece_kind {
+                PieceKind::WhitePawn if target_rank == 0 => true,
+                PieceKind::BlackPawn if target_rank == 7 => true,
+                _ => false,
+            };
+
+            let (from, to) = ((orig_rank, orig_file), (target_rank, target_file));
+            if needs_promotion && self.board.validate_pawn_move(piece_kind.color(), from, to) {
+                self.promotion_pending = Some((from, to));
+                return;
+            }
+
+            if self
+                .board
+                .is_move_legal((orig_rank, orig_file), (target_rank, target_file), None)
+            {
+                match self.board.move_piece(
+                    (orig_rank, orig_file),
+                    (target_rank, target_file),
+                    None,
+                ) {
+                    Ok((_, captured)) => {
+                        match captured {
+                            Some(_) => self.capture_sound(),
+                            None => self.move_sound(),
+                        }
+
+                        self.board.update_state();
+                        match self.board.state {
+                            State::Checkmate { .. } | State::Stalemate | State::Draw => {
+                                self.handle_game_over();
+                                return;
+                            }
+                            _ => {}
+                        }
+
                         if let Some(center) = self.board.center_at((target_rank, target_file)) {
                             self.drag_pos = center;
                         }
@@ -91,7 +119,7 @@ impl Cactus {
 
                     if let Some(piece) = selected_piece {
                         if let State::Playing { turn } = self.board.state {
-                            if piece.color() != turn.color {
+                            if piece.color() != turn {
                                 return;
                             }
                         }
@@ -103,17 +131,45 @@ impl Cactus {
 
                         if can_move {
                             if self.board.piece_at((sel_rank, sel_file)).is_some() {
+                                let piece_kind = self.board.piece_at((sel_rank, sel_file)).unwrap();
+                                let needs_promotion = match piece_kind {
+                                    PieceKind::WhitePawn if rank == 0 => true,
+                                    PieceKind::BlackPawn if rank == 7 => true,
+                                    _ => false,
+                                };
+
+                                let (from, to) = ((sel_rank, sel_file), (rank, file));
+                                if needs_promotion
+                                    && self.board.validate_pawn_move(piece_kind.color(), from, to)
+                                {
+                                    self.promotion_pending = Some((from, to));
+                                    return;
+                                }
                                 if self.board.is_move_legal(
                                     (sel_rank, sel_file),
                                     (rank, file),
+                                    None,
                                 ) {
-                                    if self
-                                        .board
-                                        .move_piece((sel_rank, sel_file), (rank, file))
-                                        .is_ok()
-                                    {
-                                        self.board.play_turn();
-                                        self.move_sound();
+                                    if let Ok((_, captured)) = self.board.move_piece(
+                                        (sel_rank, sel_file),
+                                        (rank, file),
+                                        None,
+                                    ) {
+                                        match captured {
+                                            Some(_) => self.capture_sound(),
+                                            None => self.move_sound(),
+                                        }
+                                        self.board.update_state();
+                                        match self.board.state {
+                                            State::Checkmate { .. }
+                                            | State::Stalemate
+                                            | State::Draw => {
+                                                self.handle_game_over();
+                                                return;
+                                            }
+                                            _ => {}
+                                        }
+
                                         self.drag_pos = self.board.centers[rank][file];
                                         self.clear_selection = true;
                                     }
@@ -133,5 +189,10 @@ impl Cactus {
                 }
             }
         }
+    }
+
+    pub fn handle_game_over(&mut self) {
+        self.game_over_sound();
+        self.show_game_over_popup = true;
     }
 }

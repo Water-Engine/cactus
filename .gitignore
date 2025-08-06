@@ -21,6 +21,7 @@ target
 #.idea/
 
 .vscode/
+stockfish/
 
 # Added by cargo
 

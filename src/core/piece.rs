@@ -20,7 +20,6 @@ pub static WHITE_QUEEN: &[u8] = include_bytes!("../../assets/cburnett/wQ.svg");
 pub static WHITE_ROOK: &[u8] = include_bytes!("../../assets/cburnett/wR.svg");
 
 pub struct Piece<'a> {
-    pub kind: PieceKind,
     pub bytes: &'a [u8],
 }
 
@@ -40,6 +39,7 @@ pub enum PieceKind {
     WhiteRook,
 }
 
+#[derive(Copy, Clone, PartialEq, Eq, Debug)]
 pub enum PieceType {
     Pawn,
     Knight,
@@ -50,7 +50,29 @@ pub enum PieceType {
 }
 
 impl PieceKind {
-    pub fn color(self) -> Color {
+    pub fn new(piece_type: PieceType, color: Color) -> Self {
+        use Color::*;
+        use PieceKind::*;
+        use PieceType::*;
+
+        match (piece_type, color) {
+            (Pawn, White) => WhitePawn,
+            (Knight, White) => WhiteKnight,
+            (Bishop, White) => WhiteBishop,
+            (Rook, White) => WhiteRook,
+            (Queen, White) => WhiteQueen,
+            (King, White) => WhiteKing,
+
+            (Pawn, Black) => BlackPawn,
+            (Knight, Black) => BlackKnight,
+            (Bishop, Black) => BlackBishop,
+            (Rook, Black) => BlackRook,
+            (Queen, Black) => BlackQueen,
+            (King, Black) => BlackKing,
+        }
+    }
+
+    pub fn color(&self) -> Color {
         use PieceKind::*;
 
         match self {
@@ -63,7 +85,7 @@ impl PieceKind {
         }
     }
 
-    pub fn to_type(self) -> PieceType {
+    pub fn to_type(&self) -> PieceType {
         use PieceKind::*;
         use PieceType::*;
 
@@ -74,6 +96,17 @@ impl PieceKind {
             WhiteRook | BlackRook => Rook,
             WhiteQueen | BlackQueen => Queen,
             WhiteKing | BlackKing => King,
+        }
+    }
+
+    pub fn score(&self) -> usize {
+        match self.to_type() {
+            PieceType::Pawn => 1,
+            PieceType::Knight => 3,
+            PieceType::Bishop => 3,
+            PieceType::Rook => 5,
+            PieceType::Queen => 9,
+            PieceType::King => 0,
         }
     }
 }
@@ -95,17 +128,19 @@ impl<'a> Piece<'a> {
             PieceKind::WhiteRook => WHITE_ROOK,
         };
 
-        Self { kind, bytes }
+        Self { bytes }
     }
 }
 
 pub struct PieceImages {
     textures: HashMap<PieceKind, TextureHandle>,
+    captures: HashMap<PieceKind, TextureHandle>,
 }
 
 impl PieceImages {
     pub fn new(ctx: &Context, pixel_size: f32) -> Self {
         let mut textures = HashMap::new();
+        let mut captures = HashMap::new();
 
         let data = [
             (PieceKind::WhitePawn, WHITE_PAWN),
@@ -127,9 +162,14 @@ impl PieceImages {
             let texture =
                 ctx.load_texture(format!("{:?}", kind), img, egui::TextureOptions::default());
             textures.insert(kind, texture);
+
+            let img = Self::svg_to_image(svg_bytes, pixel_size / 2.0);
+            let texture =
+                ctx.load_texture(format!("{:?}", kind), img, egui::TextureOptions::default());
+            captures.insert(kind, texture);
         }
 
-        Self { textures }
+        Self { textures, captures }
     }
 
     pub fn update_textures(&mut self, ctx: &egui::Context, pixel_size: f32) {
@@ -142,10 +182,24 @@ impl PieceImages {
             *texture =
                 ctx.load_texture(format!("{:?}", kind), img, egui::TextureOptions::default());
         }
+
+        for (kind, texture) in self.captures.iter_mut() {
+            let piece = Piece::from_kind(*kind);
+            let svg_bytes = piece.bytes;
+
+            let img = Self::svg_to_image(svg_bytes, pixel_size / 2.0);
+
+            *texture =
+                ctx.load_texture(format!("{:?}", kind), img, egui::TextureOptions::default());
+        }
     }
 
-    pub fn get(&self, kind: PieceKind) -> Option<&TextureHandle> {
-        self.textures.get(&kind)
+    pub fn get_texture(&self, kind: PieceKind) -> &TextureHandle {
+        self.textures.get(&kind).expect("Unknown PieceKind")
+    }
+
+    pub fn get_capture(&self, kind: PieceKind) -> &TextureHandle {
+        self.captures.get(&kind).expect("Unknown PieceKind")
     }
 
     fn svg_to_image(svg_data: &[u8], size: f32) -> ColorImage {

@@ -1,8 +1,11 @@
 use crate::core::{board::*, piece::*};
+use crate::gui::{DEFAULT_APP_SIZE, DEFAULT_BOARD_SIZE, DEFAULT_PIECE_SIZE};
 
-use eframe::egui::{self, Context, Painter, Pos2, Vec2};
+use eframe::egui::{self, Color32, Context, IconData, Painter, Pos2, Vec2};
 use eframe::{App, Frame};
 use rodio::{OutputStream, OutputStreamBuilder};
+
+static ICON: &[u8] = include_bytes!("../../assets/icon.png");
 
 pub struct Cactus {
     pub board: Board,
@@ -15,15 +18,19 @@ pub struct Cactus {
     pub painter: Option<Painter>,
     pub size: Vec2,
     pub audio_stream: Option<OutputStream>,
+    pub promotion_pending: Option<((usize, usize), (usize, usize))>,
+    pub show_game_over_popup: bool,
 }
 
 impl Cactus {
     pub fn new(ctx: &egui::Context) -> Self {
-        let handle = OutputStreamBuilder::open_default_stream()
-    .expect("Failed to initialize audio");
+        let mut handle =
+            OutputStreamBuilder::open_default_stream().expect("Failed to initialize audio");
+        handle.log_on_drop(false);
+
         Self {
             board: Board::default(),
-            images: PieceImages::new(ctx, 64.0),
+            images: PieceImages::new(ctx, DEFAULT_PIECE_SIZE),
             board_size: Vec2::splat(400.0),
             dragging: None,
             drag_pos: Pos2::default(),
@@ -31,24 +38,50 @@ impl Cactus {
             clear_selection: false,
             painter: None,
             size: Vec2::default(),
-            audio_stream: Some(handle)
+            audio_stream: Some(handle),
+            promotion_pending: None,
+            show_game_over_popup: false,
         }
     }
 }
 
 impl App for Cactus {
     fn update(&mut self, ctx: &Context, frame: &mut Frame) {
-        egui::CentralPanel::default().show(ctx, |ui| {
-            let response = self.handle_event(ctx, frame, ui);
-            self.render(&response);
-        });
+        egui::CentralPanel::default()
+            .frame(egui::Frame::new().fill(Color32::from_rgb(83, 83, 83)))
+            .show(ctx, |ui| {
+                let response = self.handle_event(ctx, frame, ui);
+                self.render(&response, ctx);
+            });
     }
 }
 
 pub fn launch() {
-    let options = eframe::NativeOptions::default();
+    let image = image::load_from_memory(ICON)
+        .expect("Failed to decode icon")
+        .into_rgba8();
+    let (width, height) = image.dimensions();
+    let rgba = image.into_raw();
+
+    let icon_data = IconData {
+        rgba,
+        width,
+        height,
+    };
+
+    let options = eframe::NativeOptions {
+        viewport: egui::ViewportBuilder {
+            min_inner_size: Some(Vec2::from((DEFAULT_APP_SIZE, DEFAULT_BOARD_SIZE))),
+            resizable: Some(false),
+            fullscreen: Some(false),
+            maximize_button: Some(false),
+            icon: Some(std::sync::Arc::new(icon_data)),
+            ..Default::default()
+        },
+        ..Default::default()
+    };
     eframe::run_native(
-        "Chess Board",
+        "Cactus",
         options,
         Box::new(|cc| Ok(Box::new(Cactus::new(&cc.egui_ctx)))),
     )
