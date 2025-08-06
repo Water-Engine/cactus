@@ -1,6 +1,6 @@
 use eframe::egui::{
-    Align, Align2, Color32, Context, Id, ImageButton, Layout, Pos2, Rect, Response, RichText,
-    Stroke, StrokeKind, Ui, Vec2, Window, vec2,
+    Align, Align2, Color32, Context, FontId, Id, ImageButton, Layout, Pos2, Rect, Response,
+    RichText, Stroke, StrokeKind, Ui, Vec2, Window, vec2,
 };
 
 use crate::{
@@ -21,6 +21,10 @@ impl Cactus {
             .as_mut()
             .expect("Painter required for rendering");
 
+        let font_id = FontId::proportional(14.0);
+        let text_color = Color32::from_gray(30);
+        let padding = 4.0;
+
         for rank in 0..8 {
             for file in 0..8 {
                 let x = rect.left() + file as f32 * square_size;
@@ -37,6 +41,28 @@ impl Cactus {
                         Color32::from_rgb(181, 136, 99)
                     },
                 );
+
+                if rank == 7 {
+                    let file_char = (b'a' + file as u8) as char;
+                    painter.text(
+                        square_rect.left_bottom() + vec2(padding, -padding),
+                        Align2::LEFT_BOTTOM,
+                        file_char,
+                        font_id.clone(),
+                        text_color,
+                    );
+                }
+
+                if file == 0 {
+                    let rank_num = (8 - rank).to_string();
+                    painter.text(
+                        square_rect.left_top() + vec2(padding, padding),
+                        Align2::LEFT_TOP,
+                        rank_num,
+                        font_id.clone(),
+                        text_color,
+                    );
+                }
 
                 if self.dragging.is_none() && !self.clear_selection {
                     if let Some((sel_rank, sel_file)) = self.selected {
@@ -266,7 +292,7 @@ impl Cactus {
         Window::new("Game Over")
             .collapsible(false)
             .resizable(false)
-            .anchor(Align2::CENTER_CENTER, [0.0, 0.0])
+            .default_pos([0.0, 0.0])
             .show(ctx, |ui| {
                 ui.with_layout(Layout::top_down_justified(Align::Center), |ui| {
                     ui.label(

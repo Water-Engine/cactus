@@ -1,4 +1,7 @@
-use crate::core::{Color, STARTING_COLOR, piece::*};
+use crate::{
+    core::{Color, STARTING_COLOR, piece::*},
+    moves::moves::Move,
+};
 
 use std::collections::HashMap;
 
@@ -19,6 +22,7 @@ pub struct Board {
     pub flags: Flags,
     pub halfmove_clock: usize,
     pub position_history: HashMap<u64, usize>,
+    pub moves: Vec<Move>,
 }
 
 #[derive(Copy, Clone, Default)]
@@ -92,6 +96,7 @@ impl Default for Board {
             flags: Flags::default(),
             halfmove_clock: 0,
             position_history: HashMap::new(),
+            moves: Vec::new(),
         };
 
         for i in 0..8 {
@@ -233,6 +238,14 @@ impl Board {
             self.halfmove_clock += 1;
         }
 
+        let mv = Move {
+            from,
+            to,
+            promotion: promoted_piece.map(|p| p.to_type()),
+            piece,
+        };
+        self.moves.push(mv);
+
         Ok((promoted_piece.unwrap_or(piece), captured))
     }
 
@@ -251,7 +264,6 @@ impl Board {
         let entry = self.position_history.entry(hash).or_insert(0);
         *entry += 1;
         let num_repeats = *entry;
-        dbg!(num_repeats);
 
         self.state = if !has_moves && in_check {
             State::Checkmate {
@@ -292,6 +304,7 @@ impl Board {
             flags: self.flags,
             halfmove_clock: self.halfmove_clock,
             position_history: self.position_history.clone(),
+            moves: self.moves.clone(),
         };
 
         for i in 0..8 {

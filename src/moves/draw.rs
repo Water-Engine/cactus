@@ -42,7 +42,6 @@ impl Board {
 
 impl Hash for Board {
     fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
-        // Hash pieces
         for rank in 0..8 {
             for file in 0..8 {
                 if let Some(piece) = self.squares[rank][file].piece {

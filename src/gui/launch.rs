@@ -1,4 +1,5 @@
 use crate::core::{board::*, piece::*};
+use crate::engine::EngineHandle;
 use crate::gui::{DEFAULT_APP_SIZE, DEFAULT_BOARD_SIZE, DEFAULT_PIECE_SIZE};
 
 use eframe::egui::{self, Color32, Context, IconData, Painter, Pos2, Vec2};
@@ -20,10 +21,18 @@ pub struct Cactus {
     pub audio_stream: Option<OutputStream>,
     pub promotion_pending: Option<((usize, usize), (usize, usize))>,
     pub show_game_over_popup: bool,
+
+    pub engine: Option<EngineHandle>,
+    pub engine_is_black: Option<bool>,
+    pub waiting_for_engine_move: bool,
 }
 
 impl Cactus {
-    pub fn new(ctx: &egui::Context) -> Self {
+    pub fn new(
+        ctx: &egui::Context,
+        engine: Option<EngineHandle>,
+        engine_is_black: Option<bool>,
+    ) -> Self {
         let mut handle =
             OutputStreamBuilder::open_default_stream().expect("Failed to initialize audio");
         handle.log_on_drop(false);
@@ -41,6 +50,9 @@ impl Cactus {
             audio_stream: Some(handle),
             promotion_pending: None,
             show_game_over_popup: false,
+            engine: engine,
+            engine_is_black,
+            waiting_for_engine_move: false,
         }
     }
 }
@@ -52,11 +64,13 @@ impl App for Cactus {
             .show(ctx, |ui| {
                 let response = self.handle_event(ctx, frame, ui);
                 self.render(&response, ctx);
+
+                self.try_engine_turn();
             });
     }
 }
 
-pub fn launch() {
+pub fn launch(engine_handle: Option<EngineHandle>, engine_is_black: Option<bool>) {
     let image = image::load_from_memory(ICON)
         .expect("Failed to decode icon")
         .into_rgba8();
@@ -83,7 +97,13 @@ pub fn launch() {
     eframe::run_native(
         "Cactus",
         options,
-        Box::new(|cc| Ok(Box::new(Cactus::new(&cc.egui_ctx)))),
+        Box::new(|cc| {
+            Ok(Box::new(Cactus::new(
+                &cc.egui_ctx,
+                engine_handle,
+                engine_is_black,
+            )))
+        }),
     )
     .expect("Failed to launch Cactus")
 }

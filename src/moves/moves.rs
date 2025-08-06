@@ -4,6 +4,41 @@ use crate::core::{
     piece::{PieceKind, PieceType},
 };
 
+#[derive(Clone)]
+pub struct Move {
+    pub from: (usize, usize),
+    pub to: (usize, usize),
+    pub promotion: Option<PieceType>,
+    pub piece: PieceKind,
+}
+
+impl Move {
+    pub fn to_uci(&self) -> String {
+        let (rank1, file1) = self.from;
+        let (rank2, file2) = self.to;
+
+        let mut s = format!(
+            "{}{}{}{}",
+            (b'a' + file1 as u8) as char,
+            8 - rank1,
+            (b'a' + file2 as u8) as char,
+            8 - rank2,
+        );
+
+        if let Some(promo) = self.promotion {
+            s.push(match promo {
+                PieceType::Queen => 'q',
+                PieceType::Rook => 'r',
+                PieceType::Bishop => 'b',
+                PieceType::Knight => 'n',
+                _ => unreachable!(),
+            });
+        }
+
+        s
+    }
+}
+
 impl Board {
     pub fn update_castling_flags(&mut self, from: (usize, usize), piece: PieceKind) {
         match piece {
