@@ -1,3 +1,5 @@
+use crate::core::Color;
+
 use std::collections::HashMap;
 
 use eframe::egui::{self, ColorImage, Context, TextureHandle, Vec2};
@@ -56,6 +58,19 @@ impl<'a> Piece<'a> {
         };
 
         Self { kind, bytes }
+    }
+
+    pub fn color(&self) -> Color {
+        use PieceKind::*;
+
+        match self.kind {
+            WhiteBishop | WhiteKing | WhiteKnight | WhitePawn | WhiteQueen | WhiteRook => {
+                Color::White
+            }
+            BlackBishop | BlackKing | BlackKnight | BlackPawn | BlackQueen | BlackRook => {
+                Color::Black
+            }
+        }
     }
 }
 
