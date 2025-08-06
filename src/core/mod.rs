@@ -1,8 +1,9 @@
 pub mod board;
-pub mod moves;
 pub mod piece;
-pub mod state;
 
+pub const STARTING_COLOR: Color = Color::White;
+
+#[derive(Copy, Clone, PartialEq, Eq)]
 pub enum Color {
     White,
     Black,

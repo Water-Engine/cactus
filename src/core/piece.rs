@@ -40,6 +40,44 @@ pub enum PieceKind {
     WhiteRook,
 }
 
+pub enum PieceType {
+    Pawn,
+    Knight,
+    Bishop,
+    Rook,
+    Queen,
+    King,
+}
+
+impl PieceKind {
+    pub fn color(self) -> Color {
+        use PieceKind::*;
+
+        match self {
+            WhiteBishop | WhiteKing | WhiteKnight | WhitePawn | WhiteQueen | WhiteRook => {
+                Color::White
+            }
+            BlackBishop | BlackKing | BlackKnight | BlackPawn | BlackQueen | BlackRook => {
+                Color::Black
+            }
+        }
+    }
+
+    pub fn to_type(self) -> PieceType {
+        use PieceKind::*;
+        use PieceType::*;
+
+        match self {
+            WhitePawn | BlackPawn => Pawn,
+            WhiteKnight | BlackKnight => Knight,
+            WhiteBishop | BlackBishop => Bishop,
+            WhiteRook | BlackRook => Rook,
+            WhiteQueen | BlackQueen => Queen,
+            WhiteKing | BlackKing => King,
+        }
+    }
+}
+
 impl<'a> Piece<'a> {
     pub fn from_kind(kind: PieceKind) -> Self {
         let bytes = match kind {
@@ -58,19 +96,6 @@ impl<'a> Piece<'a> {
         };
 
         Self { kind, bytes }
-    }
-
-    pub fn color(&self) -> Color {
-        use PieceKind::*;
-
-        match self.kind {
-            WhiteBishop | WhiteKing | WhiteKnight | WhitePawn | WhiteQueen | WhiteRook => {
-                Color::White
-            }
-            BlackBishop | BlackKing | BlackKnight | BlackPawn | BlackQueen | BlackRook => {
-                Color::Black
-            }
-        }
     }
 }
 

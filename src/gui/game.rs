@@ -18,7 +18,7 @@ impl Cactus {
         if self.board.center_at((0, 0)) == Some(Pos2::ZERO)
             || self.board_size != response.rect.size()
         {
-            let mut new_board = Board::refresh(response.rect);
+            let mut new_board = Board::refresh(response.rect, self.board);
             for rank in 0..8 {
                 for file in 0..8 {
                     let pos = (rank, file);

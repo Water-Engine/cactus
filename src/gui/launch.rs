@@ -2,6 +2,7 @@ use crate::core::{board::*, piece::*};
 
 use eframe::egui::{self, Context, Painter, Pos2, Vec2};
 use eframe::{App, Frame};
+use rodio::{OutputStream, OutputStreamBuilder};
 
 pub struct Cactus {
     pub board: Board,
@@ -13,10 +14,13 @@ pub struct Cactus {
     pub clear_selection: bool,
     pub painter: Option<Painter>,
     pub size: Vec2,
+    pub audio_stream: Option<OutputStream>,
 }
 
 impl Cactus {
     pub fn new(ctx: &egui::Context) -> Self {
+        let handle = OutputStreamBuilder::open_default_stream()
+    .expect("Failed to initialize audio");
         Self {
             board: Board::default(),
             images: PieceImages::new(ctx, 64.0),
@@ -27,6 +31,7 @@ impl Cactus {
             clear_selection: false,
             painter: None,
             size: Vec2::default(),
+            audio_stream: Some(handle)
         }
     }
 }

@@ -1,4 +1,4 @@
-use crate::core::piece::*;
+use crate::core::{Color, STARTING_COLOR, piece::*};
 
 use eframe::egui::{Pos2, Rect};
 
@@ -7,9 +7,54 @@ pub struct Square {
     pub piece: Option<PieceKind>,
 }
 
+#[derive(Copy, Clone)]
 pub struct Board {
     pub squares: [[Square; 8]; 8],
     pub centers: [[Pos2; 8]; 8],
+    pub state: State,
+    pub players: Players,
+}
+
+#[derive(Copy, Clone)]
+pub enum State {
+    Playing { turn: Player },
+    Checkmate { winner: Player },
+    Stalemate,
+    Draw,
+}
+
+impl Default for State {
+    fn default() -> Self {
+        State::Playing {
+            turn: Player::from_color(STARTING_COLOR),
+        }
+    }
+}
+
+#[derive(Copy, Clone)]
+pub struct Player {
+    pub color: Color,
+}
+
+impl Player {
+    pub fn from_color(color: Color) -> Self {
+        Self { color }
+    }
+}
+
+#[derive(Copy, Clone)]
+pub struct Players {
+    pub white: Player,
+    pub black: Player,
+}
+
+impl Default for Players {
+    fn default() -> Self {
+        Self {
+            white: Player::from_color(Color::White),
+            black: Player::from_color(Color::Black),
+        }
+    }
 }
 
 impl Default for Board {
@@ -20,7 +65,12 @@ impl Default for Board {
         let squares = [[empty_square; 8]; 8];
         let centers = [[Pos2::ZERO; 8]; 8];
 
-        let mut board = Board { squares, centers };
+        let mut board = Board {
+            squares,
+            centers,
+            state: State::default(),
+            players: Players::default(),
+        };
 
         for i in 0..8 {
             board.squares[1][i].piece = Some(BlackPawn);
@@ -94,19 +144,45 @@ impl Board {
         if !Self::is_valid_pos(from) || !Self::is_valid_pos(to) {
             return Err("Position out of bounds".into());
         }
-        let piece = self.piece_at(from);
-        if piece.is_none() {
-            return Err("No piece at from-position".into());
+
+        let piece = self.piece_at(from).ok_or("No piece at from-position")?;
+
+        if let State::Playing { turn } = self.state {
+            if piece.color() != turn.color {
+                return Err("Not your turn".into());
+            }
+        } else {
+            return Err("Game is not in playing state".into());
         }
-        let piece = piece.unwrap();
+
+        if let Some(dest_piece) = self.piece_at(to) {
+            if dest_piece.color() == piece.color() {
+                return Err("Cannot capture your own piece".into());
+            }
+        }
 
         self.set_piece(to, Some(piece));
         self.set_piece(from, None);
-        println!("Moved piece");
+
         Ok(piece)
     }
 
-    pub fn refresh(rect: Rect) -> Self {
+    pub fn play_turn(&mut self) {
+        match self.state {
+            State::Playing { turn } => {
+                self.state = State::Playing {
+                    turn: if turn.color == Color::White {
+                        self.players.black
+                    } else {
+                        self.players.white
+                    },
+                }
+            }
+            _ => todo!("Not implemented yet!"),
+        }
+    }
+
+    pub fn refresh(rect: Rect, old_board: Board) -> Self {
         use PieceKind::*;
         let square_size = rect.width() / 8.0;
 
@@ -122,6 +198,8 @@ impl Board {
         let mut board = Board {
             squares: [[Square { piece: None }; 8]; 8],
             centers,
+            state: old_board.state,
+            players: old_board.players,
         };
         for i in 0..8 {
             board.squares[1][i].piece = Some(BlackPawn);
