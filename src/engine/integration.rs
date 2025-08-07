@@ -49,63 +49,81 @@ impl Board {
         self.moves.iter().map(|m| m.to_uci()).collect()
     }
 
-    pub fn apply_uci_move(&mut self, uci: &str) -> Option<PieceKind> {
+    pub fn apply_uci_move(&mut self, uci: &str) -> (Option<PieceKind>, bool) {
         if let Some(mv) = self.parse_uci_move(uci) {
             let promotion = mv.promotion.map(|pt| PieceKind::new(pt, mv.piece.color()));
             match self.move_piece(mv.from, mv.to, promotion) {
                 Ok((_, captured)) => {
-                    return captured;
+                    (captured, true)
                 }
                 Err(e) => {
                     eprintln!("Failed to apply UCI move `{}`: {}", uci, e);
+                    (None, false)
                 }
             }
         } else {
             eprintln!("Invalid UCI move: `{}`", uci);
+            (None, false)
         }
-
-        None
     }
 }
 
 impl Cactus {
     pub fn try_engine_turn(&mut self) {
+        let engine = match self.board.state {
+            State::Playing { turn: Color::White } => self.white_engine.as_ref(),
+            State::Playing { turn: Color::Black } => self.black_engine.as_ref(),
+            _ => return,
+        };
+
         if self.is_engine_turn() && !self.waiting_for_engine_move {
-            if let Some(engine) = &self.engine {
+            if let Some(engine) = engine {
                 let uci_moves = self.board.move_history_uci();
                 let position_cmd = format!("position startpos moves {}", uci_moves.join(" "));
                 engine.send_command(position_cmd);
-
-                engine.send_command("go movetime 50".to_string());
+                engine.send_command("go movetime 250".to_string());
 
                 self.waiting_for_engine_move = true;
             }
+            return;
         }
 
-        if let Some(engine) = &self.engine {
-            if let Some(bestmove) = engine.try_receive_response() {
-                let captured = self.board.apply_uci_move(&bestmove);
-                match captured {
-                    Some(_) => self.capture_sound(),
-                    None => self.move_sound(),
-                }
-                self.board.update_state();
-                match self.board.state {
-                    State::Checkmate { .. } | State::Stalemate | State::Draw => {
-                        self.handle_game_over();
+        if let Some(engine) = engine {
+            if let Some(bestmove_line) = engine.try_receive_response() {
+                if let Some(bestmove) = uci_word(&bestmove_line) {
+                    let result = self.board.apply_uci_move(&bestmove);
+                    match result {
+                        (Some(_), true) => self.capture_sound(),
+                        (None, true) => self.move_sound(),
+                        _ => {}
                     }
-                    _ => {}
+                    self.board.update_state();
+                    match self.board.state {
+                        State::Checkmate { .. } | State::Stalemate | State::Draw => {
+                            self.handle_game_over();
+                        }
+                        _ => {}
+                    }
+                    self.waiting_for_engine_move = false;
                 }
-                self.waiting_for_engine_move = false;
             }
         }
     }
 
     fn is_engine_turn(&self) -> bool {
-        match (self.engine_is_black, &self.board.state) {
-            (Some(true), State::Playing { turn: Color::Black }) => true,
-            (Some(false), State::Playing { turn: Color::White }) => true,
+        match &self.board.state {
+            State::Playing { turn: Color::White } => self.white_engine.is_some(),
+            State::Playing { turn: Color::Black } => self.black_engine.is_some(),
             _ => false,
         }
+    }
+}
+
+pub fn uci_word(line: &str) -> Option<String> {
+    let tokens: Vec<&str> = line.trim().split_whitespace().collect();
+    if tokens.len() >= 2 && tokens[0] == "bestmove" {
+        Some(tokens[1].to_string())
+    } else {
+        None
     }
 }

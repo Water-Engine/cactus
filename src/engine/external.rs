@@ -27,8 +27,8 @@ impl ExternalEngine {
                 if cmd.starts_with("go") {
                     let lines = engine.read_lines_until("bestmove");
                     for line in lines {
-                        if let Some(bestmove) = ExternalEngine::uci_word(&line) {
-                            let _ = response_sender.send(bestmove);
+                        if line.starts_with("bestmove") {
+                            let _ = response_sender.send(line);
                             break;
                         }
                     }
@@ -71,15 +71,6 @@ impl ExternalEngine {
             }
         }
         lines
-    }
-
-    fn uci_word(line: &str) -> Option<String> {
-        let tokens: Vec<&str> = line.trim().split_whitespace().collect();
-        if tokens.len() >= 2 && tokens[0] == "bestmove" {
-            Some(tokens[1].to_string())
-        } else {
-            None
-        }
     }
 
     fn start(&mut self) {

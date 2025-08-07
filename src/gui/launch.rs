@@ -22,16 +22,16 @@ pub struct Cactus {
     pub promotion_pending: Option<((usize, usize), (usize, usize))>,
     pub show_game_over_popup: bool,
 
-    pub engine: Option<EngineHandle>,
-    pub engine_is_black: Option<bool>,
+    pub white_engine: Option<EngineHandle>,
+    pub black_engine: Option<EngineHandle>,
     pub waiting_for_engine_move: bool,
 }
 
 impl Cactus {
     pub fn new(
         ctx: &egui::Context,
-        engine: Option<EngineHandle>,
-        engine_is_black: Option<bool>,
+        white_engine: Option<EngineHandle>,
+        black_engine: Option<EngineHandle>,
     ) -> Self {
         let mut handle =
             OutputStreamBuilder::open_default_stream().expect("Failed to initialize audio");
@@ -50,8 +50,9 @@ impl Cactus {
             audio_stream: Some(handle),
             promotion_pending: None,
             show_game_over_popup: false,
-            engine: engine,
-            engine_is_black,
+
+            white_engine: white_engine,
+            black_engine: black_engine,
             waiting_for_engine_move: false,
         }
     }
@@ -70,7 +71,7 @@ impl App for Cactus {
     }
 }
 
-pub fn launch(engine_handle: Option<EngineHandle>, engine_is_black: Option<bool>) {
+pub fn launch(white_engine: Option<EngineHandle>, black_engine: Option<EngineHandle>) {
     let image = image::load_from_memory(ICON)
         .expect("Failed to decode icon")
         .into_rgba8();
@@ -100,8 +101,8 @@ pub fn launch(engine_handle: Option<EngineHandle>, engine_is_black: Option<bool>
         Box::new(|cc| {
             Ok(Box::new(Cactus::new(
                 &cc.egui_ctx,
-                engine_handle,
-                engine_is_black,
+                white_engine,
+                black_engine,
             )))
         }),
     )
