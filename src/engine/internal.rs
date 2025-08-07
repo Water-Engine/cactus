@@ -1,18 +1,46 @@
 use crate::engine::EngineHandle;
 
+use std::collections::VecDeque;
+use std::fs::{self, File};
 use std::io::{BufRead, Write};
+use std::path::PathBuf;
 use std::sync::mpsc::{Receiver, Sender};
-use std::{io, thread};
+use std::{env, io, thread};
 
-pub struct CactusEngine {}
+use directories::BaseDirs;
+
+pub struct CactusEngine {
+    thinking: bool,
+    log: Option<File>,
+}
+
+struct StdoutSender;
+
+pub trait SenderLike {
+    fn send(&self, msg: String);
+}
+
+impl SenderLike for Sender<String> {
+    fn send(&self, msg: String) {
+        let _ = self.send(msg);
+    }
+}
+
+impl SenderLike for StdoutSender {
+    fn send(&self, msg: String) {
+        println!("{}", msg);
+        let _ = io::stdout().flush();
+    }
+}
 
 impl CactusEngine {
-    pub fn spawn_cactus_engine() -> EngineHandle {
+    /// For use with the games gui with thread safe logic
+    pub fn spawn_threaded() -> EngineHandle {
         let (cmd_sender, cmd_receiver) = std::sync::mpsc::channel::<String>();
         let (response_sender, response_receiver) = std::sync::mpsc::channel::<String>();
 
         thread::spawn(move || {
-            let mut engine = CactusEngine::new();
+            let mut engine = CactusEngine::default();
             engine.run(cmd_receiver, response_sender);
         });
 
@@ -22,31 +50,19 @@ impl CactusEngine {
         }
     }
 
-    fn new() -> Self {
-        Self {}
-    }
-
-    pub fn run(&mut self, cmd_receiver: Receiver<String>, response_sender: Sender<String>) {
+    fn run<S: SenderLike>(&mut self, cmd_receiver: Receiver<String>, response_sender: S) {
         for cmd in cmd_receiver.iter() {
-            if cmd == "uci" {
-                let _ = response_sender.send("id name CactusEngine".to_string());
-                let _ = response_sender.send("id author Trevor Swan".to_string());
-                let _ = response_sender.send("uciok".to_string());
-            } else if cmd == "isready" {
-                let _ = response_sender.send("readyok".to_string());
-            } else if cmd.starts_with("position") {
-            } else if cmd.starts_with("go") {
-                let best_move = "e2e4".to_string();
-                let _ = response_sender.send(format!("bestmove {}", best_move));
-            } else if cmd == "quit" {
+            self.handle_cmd(&cmd, &response_sender);
+            if cmd == "quit" {
                 break;
             }
         }
     }
 
+    /// For use in non-gui environments. Simply a command line engine
     pub fn start() {
         let stdin = io::stdin();
-        let engine = CactusEngine::new();
+        let mut engine = CactusEngine::default();
 
         for line in stdin.lock().lines() {
             match line {
@@ -59,36 +75,62 @@ impl CactusEngine {
                 Err(_) => break,
             }
         }
+    }
 
-        fn flush() {
-            let _ = io::stdout().flush();
-        }
+    fn handle_cmd<S: SenderLike>(&mut self, cmd: &str, sender: &S) {
+        self.log(format!("Received Command: {}\n", cmd));
 
-        struct StdoutSender;
+        let cmd = cmd.trim().to_lowercase();
+        let mut parts: VecDeque<&str> = cmd.split_whitespace().collect();
+        let cmd_lead = parts.pop_front();
+        let cmd_args: Vec<String> = parts.iter().map(|s| s.to_string()).collect();
 
-        impl SenderLike for StdoutSender {
-            fn send(&self, msg: String) {
-                println!("{}", msg);
-                flush();
+        match cmd_lead {
+            Some("uci") => {
+                sender.send("id name CactusEngine".to_string());
+                sender.send("id author Trevor Swan".to_string());
+                sender.send("uciok".to_string());
             }
+            Some("isready") => sender.send("readyok".to_string()),
+            Some("ucinewgame") => {}
+            Some("position") => {}
+            Some("go") => {}
+            Some("stop") => {
+                self.stop_thinking();
+            }
+            Some("d") => {}
+            Some("quit") => {}
+            _ => self.log(format!("Unknown Command: {}\n", cmd)),
         }
     }
 
-    fn handle_cmd<S: SenderLike>(&self, cmd: &str, sender: &S) {
-        if cmd == "uci" {
-            sender.send("id name CactusEngine".to_string());
-            sender.send("id author Trevor Swan".to_string());
-            sender.send("uciok".to_string());
-        } else if cmd == "isready" {
-            sender.send("readyok".to_string());
-        } else if cmd.starts_with("position") {
-        } else if cmd.starts_with("go") {
-            let best_move = "e2e4".to_string();
-            sender.send(format!("bestmove {}", best_move));
-        }
+    pub fn log(&mut self, msg: String) {
+        let Some(log) = &mut self.log else {
+            return;
+        };
+        let _ = log.write(msg.as_bytes());
+    }
+
+    pub fn stop_thinking(&mut self) {
+        self.thinking = false;
     }
 }
 
-trait SenderLike {
-    fn send(&self, msg: String);
+impl Default for CactusEngine {
+    fn default() -> Self {
+        let log_path: PathBuf = if let Some(base_dirs) = BaseDirs::new() {
+            let cactus_dir = base_dirs.data_local_dir().join("Cactus");
+            let _ = fs::create_dir_all(&cactus_dir);
+            cactus_dir.join("cactus.log")
+        } else if let Ok(current_dir) = env::current_dir() {
+            current_dir.join("cactus.log")
+        } else {
+            PathBuf::from("cactus.log")
+        };
+
+        Self {
+            thinking: false,
+            log: File::create(log_path).ok(),
+        }
+    }
 }

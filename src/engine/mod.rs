@@ -1,6 +1,7 @@
 pub mod external;
 pub mod integration;
 pub mod internal;
+pub mod parser;
 
 use std::{sync::mpsc::{Receiver, Sender}, time::Duration};
 

@@ -54,7 +54,7 @@ fn main() {
         }
     } else if use_cactus {
         println!("Starting GUI with internal Cactus engine...");
-        let engine = CactusEngine::spawn_cactus_engine();
+        let engine = CactusEngine::spawn_threaded();
         if is_engine_black {
             maybe_black_engine = Some(engine);
         } else {

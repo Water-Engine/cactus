@@ -4,6 +4,7 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
+directories = "6.0.0"
 eframe = "0.32.0"
 egui_extras = "0.32.0"
 image = "0.25.6"
