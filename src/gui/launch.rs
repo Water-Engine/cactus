@@ -66,7 +66,7 @@ impl App for Cactus {
                 let response = self.handle_event(ctx, frame, ui);
                 self.render(&response, ctx);
 
-                self.try_engine_turn();
+                self.try_engine_turn(100);
             });
     }
 }

@@ -69,7 +69,7 @@ impl Board {
 }
 
 impl Cactus {
-    pub fn try_engine_turn(&mut self) {
+    pub fn try_engine_turn(&mut self, thinking_time_ms: usize) {
         let engine = match self.board.state {
             State::Playing { turn: Color::White } => self.white_engine.as_ref(),
             State::Playing { turn: Color::Black } => self.black_engine.as_ref(),
@@ -81,7 +81,7 @@ impl Cactus {
                 let uci_moves = self.board.move_history_uci();
                 let position_cmd = format!("position startpos moves {}", uci_moves.join(" "));
                 engine.send_command(position_cmd);
-                engine.send_command("go movetime 250".to_string());
+                engine.send_command(format!("go movetime {thinking_time_ms}"));
 
                 self.waiting_for_engine_move = true;
             }
