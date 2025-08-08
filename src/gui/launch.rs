@@ -68,6 +68,9 @@ impl App for Cactus {
 
                 self.try_engine_turn(100);
             });
+
+        // Force a reload even if the user is not interacting with the app
+        ctx.request_repaint_after(std::time::Duration::from_millis(16));
     }
 }
 
