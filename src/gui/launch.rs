@@ -1,5 +1,5 @@
 use crate::core::{board::*, piece::*};
-use crate::engine::EngineHandle;
+use crate::coupling::EngineHandle;
 use crate::gui::{DEFAULT_APP_SIZE, DEFAULT_BOARD_SIZE, DEFAULT_PIECE_SIZE};
 
 use eframe::egui::{self, Color32, Context, IconData, Painter, Pos2, Vec2};

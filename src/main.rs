@@ -1,9 +1,11 @@
-use crate::engine::{EngineHandle, cactus::driver::CactusEngine, external::ExternalEngine};
+use crate::coupling::{EngineHandle, external::ExternalEngine};
+use crate::engine::driver::CactusEngine;
 
 mod core;
-mod engine;
+mod coupling;
 mod gui;
 mod moves;
+mod engine;
 
 fn main() {
     let args: Vec<String> = std::env::args()

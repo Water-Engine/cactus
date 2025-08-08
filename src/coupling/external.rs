@@ -1,4 +1,4 @@
-use crate::engine::EngineHandle;
+use crate::coupling::EngineHandle;
 
 use std::io::{BufRead, BufReader, Read, Write};
 use std::process::{ChildStdin, ChildStdout, Command, Stdio};
