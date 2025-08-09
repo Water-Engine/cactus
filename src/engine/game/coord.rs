@@ -1,0 +1,98 @@
+use crate::engine::utils::board_utils::{FILE_NAMES, RANK_NAMES};
+
+#[derive(Debug, PartialEq, Eq, PartialOrd, Ord)]
+pub struct Coord {
+    pub file_idx: i32,
+    pub rank_idx: i32,
+}
+
+impl From<(i32, i32)> for Coord {
+    fn from((file_idx, rank_idx): (i32, i32)) -> Self {
+        Self {
+            file_idx: file_idx,
+            rank_idx: rank_idx,
+        }
+    }
+}
+
+impl From<i32> for Coord {
+    fn from(square_idx: i32) -> Self {
+        Self::new(square_idx)
+    }
+}
+
+impl From<String> for Coord {
+    fn from(value: String) -> Self {
+        Self::from_string(value)
+    }
+}
+
+impl Into<i32> for Coord {
+    fn into(self) -> i32 {
+        self.index()
+    }
+}
+
+impl Into<String> for Coord {
+    fn into(self) -> String {
+        self.to_string()
+    }
+}
+
+impl Coord {
+    pub fn new(square_idx: i32) -> Self {
+        Self {
+            file_idx: Self::file_of_square(square_idx),
+            rank_idx: Self::rank_of_square(square_idx),
+        }
+    }
+
+    pub const fn from((file_idx, rank_idx): (i32, i32)) -> Self {
+        Self {
+            file_idx: file_idx,
+            rank_idx: rank_idx,
+        }
+    }
+
+    pub fn is_light_square(&self) -> bool {
+        (self.file_idx + self.rank_idx) % 2 != 0
+    }
+
+    pub fn is_valid_square(&self) -> bool {
+        self.file_idx >= 0 && self.file_idx < 8 && self.rank_idx >= 0 && self.rank_idx < 8
+    }
+
+    pub fn index(&self) -> i32 {
+        self.rank_idx * 8 + self.file_idx
+    }
+
+    pub fn to_string(&self) -> String {
+        let mut s = String::new();
+        s.push(FILE_NAMES[self.file_idx as usize]);
+        s.push_str(&(self.rank_idx + 1).to_string());
+        s
+    }
+
+    pub fn from_string(name: String) -> Self {
+        Self {
+            file_idx: FILE_NAMES
+                .iter()
+                .find(|&&file| name.chars().position(|c| c == file).is_some())
+                .map(|c| c.to_string().parse::<i32>().unwrap_or(-1))
+                .unwrap_or(-1),
+            rank_idx: RANK_NAMES
+                .iter()
+                .find(|&&rank| name.chars().position(|c| c == rank).is_some())
+                .map(|c| c.to_string().parse::<i32>().unwrap_or(-1))
+                .unwrap_or(-1),
+        }
+    }
+
+    pub fn rank_of_square(square_idx: i32) -> i32 {
+        square_idx >> 3
+    }
+
+    pub fn file_of_square(square_idx: i32) -> i32 {
+        square_idx & 0b000111
+    }
+}

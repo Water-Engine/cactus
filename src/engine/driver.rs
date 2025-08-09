@@ -95,7 +95,12 @@ impl CactusEngine {
             Some("isready") => sender.send("readyok".to_string()),
             Some("ucinewgame") => {}
             Some("position") => {
-                utils::parser::position(cmd_args);
+                match utils::parser::position(cmd_args) {
+                    Ok(moves) => {
+                        dbg!(moves);
+                    },
+                    Err(msg) => self.log(msg),
+                }
             }
             Some("go") => {}
             Some("stop") => {
