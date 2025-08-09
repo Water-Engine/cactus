@@ -1,6 +1,6 @@
 pub mod driver;
 
-pub mod board;
+pub mod game;
 pub mod eval;
 pub mod utils;
 pub mod generate;

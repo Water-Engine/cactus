@@ -1,4 +1,5 @@
 use crate::coupling::EngineHandle;
+use crate::engine::utils;
 
 use std::collections::VecDeque;
 use std::fs::{self, File};
@@ -93,7 +94,9 @@ impl CactusEngine {
             }
             Some("isready") => sender.send("readyok".to_string()),
             Some("ucinewgame") => {}
-            Some("position") => {}
+            Some("position") => {
+                utils::parser::position(cmd_args);
+            }
             Some("go") => {}
             Some("stop") => {
                 self.stop_thinking();
