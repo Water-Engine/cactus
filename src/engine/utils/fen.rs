@@ -1,6 +1,16 @@
-use crate::engine::game::{board::Board, coord::Coord, piece};
+use crate::engine::{
+    game::{
+        board::{self, Board},
+        coord::Coord,
+        piece::{self, Piece},
+    },
+};
 
 pub const STARTING_FEN: &str = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
+
+pub fn position_from_fen(fen: String) -> Result<PositionInfo, String> {
+    PositionInfo::new(fen)
+}
 
 /**
 Get the fen string of the current position
@@ -64,7 +74,7 @@ pub fn current_fen(board: &Board, always_show_ep: bool) -> String {
     let ep_name = ep_coord.to_string();
 
     let is_ep = ep_file_idx != -1;
-    let include_ep = always_show_ep || ep_possible(ep_file_idx, ep_rank_idx, board);
+    let include_ep = always_show_ep || ep_capture_possible(ep_file_idx, ep_rank_idx, board);
     fen.push_str(if is_ep && include_ep { &ep_name } else { "-" });
 
     fen.push_str(&format!(" {}", board.state.halfmove_clock));
@@ -73,6 +83,164 @@ pub fn current_fen(board: &Board, always_show_ep: bool) -> String {
     fen
 }
 
-fn ep_possible(ep_file_idx: i32, ep_rank_idx: i32, board: &Board) -> bool {
+fn ep_capture_possible(ep_file_idx: i32, ep_rank_idx: i32, board: &Board) -> bool {
     todo!("Not implemented")
+}
+
+pub fn flip_fen(fen: String) -> Result<String, String> {
+    let mut flipped_fen = String::new();
+    let sections: Vec<String> = fen.split(' ').map(|s| s.to_string()).collect();
+    if sections.len() < 5 {
+        return Err("Malformed Fen: fen string must have at least five distinct sections".into());
+    }
+    let fen_ranks: Vec<&str> = sections[0].split('/').collect();
+
+    fn invert_case(c: char) -> String {
+        if c.is_uppercase() {
+            c.to_lowercase().to_string()
+        } else {
+            c.to_uppercase().to_string()
+        }
+    }
+
+    // Section 1: ranks
+    for i in fen_ranks.len() - 1..=0 {
+        let rank = fen_ranks[i];
+        rank.chars().for_each(|c| {
+            flipped_fen.push_str(&invert_case(c));
+        });
+
+        if i != 0 {
+            flipped_fen.push('/');
+        }
+    }
+
+    // Section 2: castling
+    if let Some((_, c)) = sections[1].char_indices().next() {
+        flipped_fen.push_str(&format!(" {}", if c == 'w' { 'b' } else { 'w' }));
+    }
+    let castling_rights = sections[2].as_str();
+    let mut flipped_rights = String::new();
+    "kqKQ".chars().for_each(|c| {
+        let c_str = c.to_string();
+        if castling_rights.contains(&c_str) {
+            flipped_rights.push_str(&invert_case(c));
+        }
+    });
+    flipped_fen.push_str(&format!(
+        " {}",
+        if flipped_rights.len() == 0 {
+            "-"
+        } else {
+            &flipped_rights
+        }
+    ));
+
+    // Section 3: en passant
+    let ep = sections[3].as_str();
+    let first_two: Vec<char> = ep.chars().take(2).collect();
+    if first_two.len() == 2 {
+        let mut flipped_ep = String::new();
+        flipped_ep.push_str(&first_two[0].to_string());
+        if ep.len() > 1 {
+            flipped_ep.push(if first_two[1] == '6' { '3' } else { '6' });
+        }
+        flipped_fen.push_str(&format!(" {}", flipped_ep));
+    } else {
+        return Err("Malformed Fen: no en passant section found".into());
+    }
+    flipped_fen.push_str(&format!(" {} {}", sections[4], sections[5]));
+
+    Ok(flipped_fen)
+}
+
+pub struct PositionInfo {
+    pub fen: String,
+    pub squares: [i32; 64],
+
+    pub white_castle_kingside: bool,
+    pub white_castle_queenside: bool,
+    pub black_castle_kingside: bool,
+    pub black_castle_queenside: bool,
+
+    pub ep_file: i32,
+    pub white_to_move: bool,
+    pub halfmove_clock: usize,
+    pub move_count: i32,
+}
+
+impl PositionInfo {
+    pub fn new(fen: String) -> Result<Self, String> {
+        let mut square_pieces = [i32::default(); 64];
+        let sections: Vec<&str> = fen.split(' ').collect();
+        let (mut file, mut rank) = (0, 7);
+        if sections.len() < 3 {
+            return Err(
+                "Malformed Fen: fen string must have at least three distinct sections".into(),
+            );
+        }
+
+        sections[0].chars().for_each(|symbol| {
+            if symbol == '/' {
+                file = 0;
+                rank -= 1;
+            } else {
+                if symbol.is_numeric() {
+                    file += symbol.to_string().parse().unwrap_or(0);
+                } else {
+                    let piece_color = if symbol.is_uppercase() {
+                        piece::WHITE
+                    } else {
+                        piece::BLACK
+                    };
+                    let piece_type = Piece::from(symbol);
+                    square_pieces[rank * 8 + file] = piece_type.value | piece_color;
+                    file += 1;
+                }
+            }
+        });
+
+        let white_to_move = sections[1] == &'w'.to_string();
+        let castling_rights = sections[2];
+        let white_castle_kingside = castling_rights.contains('K');
+        let white_castle_queenside = castling_rights.contains('Q');
+        let black_castle_kingside = castling_rights.contains('k');
+        let black_castle_queenside = castling_rights.contains('q');
+
+        let mut ep_file = 0;
+        let mut halfmove_clock = 0;
+        let mut move_count = 0;
+
+        if sections.len() > 3 {
+            if let Some(ep_file_name) = sections[3].chars().nth(0) {
+                if board::FILE_NAMES.contains(&ep_file_name) {
+                    ep_file = board::FILE_NAMES
+                        .iter()
+                        .position(|&c| c == ep_file_name)
+                        .unwrap_or(0) as i32;
+                }
+            }
+        }
+
+        if sections.len() > 4 {
+            halfmove_clock = sections[4].parse().unwrap_or(0);
+        }
+
+        if sections.len() > 5 {
+            move_count = sections[5].parse().unwrap_or(0);
+        }
+
+        Ok(Self {
+            fen: fen,
+            squares: square_pieces,
+            white_castle_kingside: white_castle_kingside,
+            white_castle_queenside: white_castle_queenside,
+            black_castle_kingside: black_castle_kingside,
+            black_castle_queenside: black_castle_queenside,
+            ep_file: ep_file,
+            white_to_move: white_to_move,
+            halfmove_clock: halfmove_clock,
+            move_count: move_count,
+        })
+    }
 }

@@ -3,9 +3,9 @@ use crate::engine::driver::CactusEngine;
 
 mod core;
 mod coupling;
+mod engine;
 mod gui;
 mod moves;
-mod engine;
 
 fn main() {
     let args: Vec<String> = std::env::args()

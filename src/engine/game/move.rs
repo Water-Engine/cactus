@@ -1,4 +1,6 @@
-use super::piece::{Piece, ROOK, KNIGHT, BISHOP, QUEEN, NONE};
+use crate::engine::game::{board::Board, coord::Coord, piece};
+
+use super::piece::{BISHOP, KNIGHT, NONE, Piece, QUEEN, ROOK};
 
 pub const NO_FLAG: i32 = 0b0000;
 pub const EN_PASSANT_CAPTURE_FLAG: i32 = 0b0001;
@@ -77,7 +79,70 @@ impl Move {
             PROMOTE_TO_KNIGHT_FLAG => KNIGHT,
             PROMOTE_TO_BISHOP_FLAG => BISHOP,
             PROMOTE_TO_QUEEN_FLAG => QUEEN,
-            _ => NONE
+            _ => NONE,
         })
+    }
+}
+
+// Helper IMPL
+impl Move {
+    pub fn from_uci(board: &Board, move_name: String) -> Self {
+        let start_coord = Coord::from_string(move_name[0..3].to_string());
+        let start_square: i32 = start_coord.index();
+        let target_coord = Coord::from_string(move_name[2..5].to_string());
+        let target_square: i32 = target_coord.index();
+
+        let moved_piece_type = Piece::from(board.squares[start_square as usize]).get_type();
+        let mut flag = NO_FLAG;
+
+        if moved_piece_type == piece::PAWN {
+            if move_name.len() > 4 {
+                flag = match move_name.chars().nth(move_name.len() - 1) {
+                    Some('q') => PROMOTE_TO_QUEEN_FLAG,
+                    Some('r') => PROMOTE_TO_ROOK_FLAG,
+                    Some('n') => PROMOTE_TO_KNIGHT_FLAG,
+                    Some('b') => PROMOTE_TO_BISHOP_FLAG,
+                    _ => NO_FLAG,
+                };
+            } else if (target_coord.rank_idx - start_coord.rank_idx).abs() == 2 {
+                flag = PAWN_TWO_UP_FLAG;
+            } else if start_coord.file_idx != target_coord.file_idx
+                && board.squares[target_square as usize] == piece::NONE
+            {
+                flag = EN_PASSANT_CAPTURE_FLAG;
+            }
+        } else if moved_piece_type == piece::KING {
+            if (start_coord.file_idx - target_coord.file_idx).abs() > 1 {
+                flag = CASTLE_FLAG;
+            }
+        }
+
+        Self::from((start_square, target_square, flag))
+    }
+
+    pub fn to_uci(&self) -> String {
+        let start_square_name = Coord::new(self.start_square()).to_string();
+        let target_square_name = Coord::new(self.target_square()).to_string();
+        let mut move_name  = start_square_name + &target_square_name;
+
+        if self.is_promotion() {
+            match self.move_flag() {
+                PROMOTE_TO_ROOK_FLAG => move_name.push('r'),
+                PROMOTE_TO_KNIGHT_FLAG => move_name.push('n'),
+                PROMOTE_TO_BISHOP_FLAG => move_name.push('b'),
+                PROMOTE_TO_QUEEN_FLAG => move_name.push('q'),
+                _ => {}
+            }
+        }
+
+        move_name
+    }
+
+    pub fn from_san(board: &Board, algebraic_move: String) -> Self {
+        todo!("Not implemented")
+    }
+
+    pub fn to_san(&self) -> String {
+        todo!("Not implemented")
     }
 }

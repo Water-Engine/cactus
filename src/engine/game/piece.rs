@@ -91,21 +91,7 @@ impl From<char> for Piece {
 
 impl Into<char> for Piece {
     fn into(self) -> char {
-        match (self.get_type(), self.get_color()) {
-            (ROOK, WHITE) => 'r',
-            (KNIGHT, WHITE) => 'n',
-            (BISHOP, WHITE) => 'b',
-            (QUEEN, WHITE) => 'q',
-            (KING, WHITE) => 'k',
-            (PAWN, WHITE) => 'p',
-            (ROOK, BLACK) => 'R',
-            (KNIGHT, BLACK) => 'N',
-            (BISHOP, BLACK) => 'B',
-            (QUEEN, BLACK) => 'Q',
-            (KING, BLACK) => 'K',
-            (PAWN, BLACK) => 'P',
-            _ => ' ',
-        }
+        self.get_symbol()
     }
 }
 
@@ -124,6 +110,24 @@ impl Piece {
 
     pub fn get_type(&self) -> i32 {
         self.value & TYPE_MASK
+    }
+
+    pub fn get_symbol(&self) -> char {
+        match (self.get_type(), self.get_color()) {
+            (ROOK, WHITE) => 'r',
+            (KNIGHT, WHITE) => 'n',
+            (BISHOP, WHITE) => 'b',
+            (QUEEN, WHITE) => 'q',
+            (KING, WHITE) => 'k',
+            (PAWN, WHITE) => 'p',
+            (ROOK, BLACK) => 'R',
+            (KNIGHT, BLACK) => 'N',
+            (BISHOP, BLACK) => 'B',
+            (QUEEN, BLACK) => 'Q',
+            (KING, BLACK) => 'K',
+            (PAWN, BLACK) => 'P',
+            _ => ' ',
+        }
     }
 
     pub fn can_ortho_slide(&self) -> bool {

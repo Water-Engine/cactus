@@ -1,4 +1,4 @@
-use crate::engine::utils::board_utils::{FILE_NAMES, RANK_NAMES};
+use crate::engine::game::board::{FILE_NAMES, RANK_NAMES};
 
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord)]
 pub struct Coord {

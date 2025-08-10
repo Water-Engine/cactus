@@ -1,7 +1,10 @@
 pub mod external;
 pub mod integration;
 
-use std::{sync::mpsc::{Receiver, Sender}, time::Duration};
+use std::{
+    sync::mpsc::{Receiver, Sender},
+    time::Duration,
+};
 
 #[derive(Debug)]
 pub struct EngineHandle {
@@ -15,6 +18,8 @@ impl EngineHandle {
     }
 
     pub fn try_receive_response(&self) -> Option<String> {
-        self.response_receiver.recv_timeout(Duration::from_millis(10)).ok()
+        self.response_receiver
+            .recv_timeout(Duration::from_millis(10))
+            .ok()
     }
 }

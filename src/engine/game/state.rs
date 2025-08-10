@@ -1,6 +1,9 @@
-use crate::engine::game::{board::Board, piece::{self, MAX_PIECE_INDEX}};
+use crate::engine::game::{
+    board::Board,
+    piece::{self, MAX_PIECE_INDEX},
+};
 
-use rand::{rngs::StdRng, RngCore, SeedableRng};
+use rand::{RngCore, SeedableRng, rngs::StdRng};
 
 pub const CLEAR_WHITE_KINGSIDE_MASK: i32 = 0b1110;
 pub const CLEAR_WHITE_QUEENSIDE_MASK: i32 = 0b1101;
@@ -54,9 +57,9 @@ pub struct Zobrist {
     pub side_to_move: u64,
     pub pieces_array: [[u64; 64]; MAX_PIECE_INDEX + 1],
 
-    /// Players have 4 possible rights: queen and/or kind side, none 
+    /// Players have 4 possible rights: queen and/or kind side, none
     pub castling_rights: [u64; 16],
-    
+
     // 0 == no en passant ignoring rank
     pub en_passant_file: [u64; 9],
 }
@@ -74,7 +77,7 @@ impl Zobrist {
                 pieces_array[piece as usize][square_idx as usize] = random_u64(&mut rng);
             }
         }
-        
+
         for i in 0..castling_rights.len() {
             castling_rights[i] = if i == 0 { 0 } else { random_u64(&mut rng) };
         }
@@ -102,7 +105,7 @@ impl Zobrist {
                 key ^= self.pieces_array[piece.value as usize][square_idx];
             }
         }
-        
+
         key
     }
 }

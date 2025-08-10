@@ -53,9 +53,7 @@ impl Board {
         if let Some(mv) = self.parse_uci_move(uci) {
             let promotion = mv.promotion.map(|pt| PieceKind::new(pt, mv.piece.color()));
             match self.move_piece(mv.from, mv.to, promotion) {
-                Ok((_, captured)) => {
-                    (captured, true)
-                }
+                Ok((_, captured)) => (captured, true),
                 Err(e) => {
                     eprintln!("Failed to apply UCI move `{}`: {}", uci, e);
                     (None, false)
