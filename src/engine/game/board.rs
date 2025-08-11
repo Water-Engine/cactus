@@ -2,7 +2,11 @@ use std::collections::VecDeque;
 
 use crate::engine::{
     game::{
-        board, coord::Coord, r#move::{self, Move}, piece::{self, PieceList}, state::{State, Zobrist}
+        board,
+        coord::Coord,
+        r#move::{self, Move},
+        piece::{self, PieceList},
+        state::{self, State, Zobrist},
     },
     generate::bitboard::BitBoard,
     utils::fen::{self, PositionInfo},
@@ -25,23 +29,23 @@ pub const BISHOP_DIRECTIONS: [Coord; 4] = [
 pub const FILE_NAMES: &[char] = &['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'];
 pub const RANK_NAMES: &[char] = &['1', '2', '3', '4', '5', '6', '7', '8'];
 
-pub const A1: usize = 0;
-pub const B1: usize = 1;
-pub const C1: usize = 2;
-pub const D1: usize = 3;
-pub const E1: usize = 4;
-pub const F1: usize = 5;
-pub const G1: usize = 6;
-pub const H1: usize = 7;
+pub const A1: i32 = 0;
+pub const B1: i32 = 1;
+pub const C1: i32 = 2;
+pub const D1: i32 = 3;
+pub const E1: i32 = 4;
+pub const F1: i32 = 5;
+pub const G1: i32 = 6;
+pub const H1: i32 = 7;
 
-pub const A8: usize = 56;
-pub const B8: usize = 57;
-pub const C8: usize = 58;
-pub const D8: usize = 59;
-pub const E8: usize = 60;
-pub const F8: usize = 61;
-pub const G8: usize = 62;
-pub const H8: usize = 63;
+pub const A8: i32 = 56;
+pub const B8: i32 = 57;
+pub const C8: i32 = 58;
+pub const D8: i32 = 59;
+pub const E8: i32 = 60;
+pub const F8: i32 = 61;
+pub const G8: i32 = 62;
+pub const H8: i32 = 63;
 
 #[derive(Clone, Copy)]
 pub enum Color {
@@ -52,8 +56,8 @@ pub enum Color {
 impl Color {
     pub fn to_piece_color(&self) -> i32 {
         match self {
-            Self::White => 0,
-            Self::Black => 1,
+            Self::White => piece::WHITE,
+            Self::Black => piece::BLACK,
         }
     }
 }
@@ -179,7 +183,7 @@ impl Board {
         let prev_en_passant_file = self.state.en_passant_file;
         let mut new_zobrist_key = self.state.zobrist.key;
         let mut new_castling_rights = self.state.castling_rights;
-        let new_en_passant_file = 0;
+        let mut new_ep_file = 0;
 
         self.move_piece(moved_piece, start_square, target_square);
 
@@ -210,13 +214,80 @@ impl Board {
 
             if move_flag == r#move::CASTLE_FLAG {
                 let rook_piece = piece::Piece::from((piece::ROOK, move_color.to_piece_color()));
-                let king_side = target_square == board::G1 as i32 || target_square == board::G8 as i32;
-                let castling_rook_from_idx = king_side.then(|| target_square + 1).unwrap_or(target_square - 2);
-                let castling_rook_to_idx = king_side.then(|| target_square - 1).unwrap_or(target_square + 1);
+                let king_side =
+                    target_square == board::G1 as i32 || target_square == board::G8 as i32;
+                let castling_rook_from_idx = king_side
+                    .then(|| target_square + 1)
+                    .unwrap_or(target_square - 2);
+                let castling_rook_to_idx = king_side
+                    .then(|| target_square - 1)
+                    .unwrap_or(target_square + 1);
 
-                // STOPPED HERE 8/10 MIDNIGHT
+                BitBoard::toggle_squares(
+                    &mut self.piece_bbs[rook_piece.value as usize],
+                    &[castling_rook_from_idx, castling_rook_to_idx],
+                );
+                BitBoard::toggle_squares(
+                    &mut self.color_bbs[move_color as usize],
+                    &[castling_rook_from_idx, castling_rook_to_idx],
+                );
+                self.all_piece_lists[rook_piece.value as usize].move_piece(castling_rook_from_idx, castling_rook_to_idx);
+                self.squares[castling_rook_from_idx as usize] = piece::NONE;
+                self.squares[castling_rook_to_idx as usize] = piece::ROOK | move_color.to_piece_color();
+
+                new_zobrist_key ^= self.state.zobrist.pieces_array[rook_piece.value as usize][castling_rook_from_idx as usize];
+                new_zobrist_key ^= self.state.zobrist.pieces_array[rook_piece.value as usize][castling_rook_to_idx as usize];
             }
         }
+
+        // Promotions
+        if is_promotion {
+            self.total_heavy_material += 1;
+            let promotion_type = match move_flag {
+                r#move::PROMOTE_TO_QUEEN_FLAG => piece::QUEEN,
+                r#move::PROMOTE_TO_ROOK_FLAG => piece::ROOK,
+                r#move::PROMOTE_TO_KNIGHT_FLAG => piece::KNIGHT,
+                r#move::PROMOTE_TO_BISHOP_FLAG => piece::BISHOP,
+                _ => 0,
+            };
+            let promotion_piece = piece::Piece::from((promotion_type, move_color.to_piece_color())).value;
+
+            BitBoard::toggle_square(&mut self.piece_bbs[moved_piece as usize], target_square);
+            BitBoard::toggle_square(&mut self.piece_bbs[promotion_piece as usize], target_square);
+            self.all_piece_lists[moved_piece as usize].remove_piece(target_square);
+            self.all_piece_lists[promotion_piece as usize].add_piece(target_square);
+            self.squares[target_square as usize] = promotion_piece;
+        }
+
+        // EP
+        if move_flag == r#move::PAWN_TWO_UP_FLAG {
+            let file = Coord::file_of_square(start_square) + 1;
+            new_ep_file = file;
+            new_zobrist_key ^= self.state.zobrist.en_passant_file[file as usize];
+        }
+
+        // Castling Rights
+        if prev_castle_state != 0 {
+            if target_square == H1 || start_square == H1 {
+                new_castling_rights &= state::CLEAR_WHITE_KINGSIDE_MASK;
+            } else if target_square == A1 || start_square == A1 {
+                new_castling_rights &= state::CLEAR_WHITE_QUEENSIDE_MASK;
+            }
+
+            if target_square == H8 || start_square == H8 {
+                new_castling_rights &= state::CLEAR_BLACK_KINGSIDE_MASK;
+            } else if target_square == A8 || start_square == A8 {
+                new_castling_rights &= state::CLEAR_BLACK_QUEENSIDE_MASK;
+            }
+        }
+
+        // Update Zobrist
+        new_zobrist_key ^= self.state.zobrist.side_to_move;
+        new_zobrist_key ^= self.state.zobrist.pieces_array[moved_piece as usize][start_square as usize];
+        new_zobrist_key ^= self.state.zobrist.pieces_array[self.squares[target_square as usize] as usize][target_square as usize];
+        new_zobrist_key ^= self.state.zobrist.en_passant_file[prev_en_passant_file as usize];
+
+        
     }
 
     /**
