@@ -47,7 +47,7 @@ pub const PIECE_INDICES: [i32; 12] = [
 const TYPE_MASK: i32 = 0b0111;
 const COLOR_MASK: i32 = 0b1000;
 
-#[derive(Debug, Eq, PartialEq)]
+#[derive(Debug, Eq, PartialEq, Clone, Copy)]
 pub struct Piece {
     pub value: i32,
 }
@@ -60,6 +60,7 @@ impl From<i32> for Piece {
 
 impl From<(i32, i32)> for Piece {
     fn from((r#type, color): (i32, i32)) -> Self {
+        
         Self {
             value: r#type | color,
         }
@@ -82,7 +83,7 @@ impl From<char> for Piece {
                 'B' | 'b' => BISHOP,
                 'Q' | 'q' => QUEEN,
                 'K' | 'k' => KING,
-                'P' | 'p' => QUEEN,
+                'P' | 'p' => PAWN,
                 _ => NONE,
             },
         }
@@ -114,18 +115,18 @@ impl Piece {
 
     pub fn get_symbol(&self) -> char {
         match (self.get_type(), self.get_color()) {
-            (ROOK, WHITE) => 'r',
-            (KNIGHT, WHITE) => 'n',
-            (BISHOP, WHITE) => 'b',
-            (QUEEN, WHITE) => 'q',
-            (KING, WHITE) => 'k',
-            (PAWN, WHITE) => 'p',
-            (ROOK, BLACK) => 'R',
-            (KNIGHT, BLACK) => 'N',
-            (BISHOP, BLACK) => 'B',
-            (QUEEN, BLACK) => 'Q',
-            (KING, BLACK) => 'K',
-            (PAWN, BLACK) => 'P',
+            (ROOK, BLACK) => 'r',
+            (KNIGHT, BLACK) => 'n',
+            (BISHOP, BLACK) => 'b',
+            (QUEEN, BLACK) => 'q',
+            (KING, BLACK) => 'k',
+            (PAWN, BLACK) => 'p',
+            (ROOK, WHITE) => 'R',
+            (KNIGHT, WHITE) => 'N',
+            (BISHOP, WHITE) => 'B',
+            (QUEEN, WHITE) => 'Q',
+            (KING, WHITE) => 'K',
+            (PAWN, WHITE) => 'P',
             _ => ' ',
         }
     }
@@ -157,6 +158,12 @@ pub struct PieceList {
     pub occupied_squares: [i32; 16],
     map: [usize; 64],
     num_pieces: usize,
+}
+
+impl Default for PieceList {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 impl PieceList {

@@ -12,13 +12,13 @@ pub const CLEAR_BLACK_QUEENSIDE_MASK: i32 = 0b0111;
 
 const RNG_SEED: u64 = 29426028;
 
-#[derive(Debug, Default)]
+#[derive(Debug, Default, Clone, Copy)]
 pub struct State {
     pub captured_piece_type: i32,
     pub en_passant_file: i32,
     pub castling_rights: i32,
     pub halfmove_clock: i32,
-    pub zobrist_key: u64,
+    pub zobrist: Zobrist,
 }
 
 impl State {
@@ -27,14 +27,14 @@ impl State {
         en_passant_file: i32,
         castling_rights: i32,
         halfmove_clock: i32,
-        zobrist_key: u64,
+        zobrist: Zobrist,
     ) -> Self {
         Self {
             captured_piece_type: captured_piece_type,
             en_passant_file: en_passant_file,
             castling_rights: castling_rights,
             halfmove_clock: halfmove_clock,
-            zobrist_key: zobrist_key,
+            zobrist: zobrist,
         }
     }
 
@@ -53,7 +53,9 @@ impl State {
 Single 64-bit value used avoid reevaluating repeat positions
 * Ref: https://en.wikipedia.org/wiki/Zobrist_hashing
 */
+#[derive(Debug, Clone, Copy)]
 pub struct Zobrist {
+    pub key: u64,
     pub side_to_move: u64,
     pub pieces_array: [[u64; 64]; MAX_PIECE_INDEX + 1],
 
@@ -62,6 +64,18 @@ pub struct Zobrist {
 
     // 0 == no en passant ignoring rank
     pub en_passant_file: [u64; 9],
+}
+
+impl Default for Zobrist {
+    fn default() -> Self {
+        Self {
+            key: u64::default(),
+            side_to_move: u64::default(),
+            pieces_array: [[u64::default(); 64]; MAX_PIECE_INDEX + 1],
+            castling_rights: [u64::default(); 16],
+            en_passant_file: [u64::default(); 9],
+        }
+    }
 }
 
 impl Zobrist {
@@ -89,6 +103,7 @@ impl Zobrist {
         let side_to_move = random_u64(&mut rng);
 
         Self {
+            key: 0,
             pieces_array: pieces_array,
             castling_rights: castling_rights,
             en_passant_file: en_passant_file,
@@ -97,7 +112,7 @@ impl Zobrist {
     }
 
     /// This is a costly function, use sparingly and incrementally update key when possible
-    pub fn key(&self, board: &Board) -> u64 {
+    pub fn key(&mut self, board: &Board) {
         let mut key: u64 = 0;
         for square_idx in 0..64 {
             let piece = piece::Piece::from(board.squares[square_idx]);
@@ -106,7 +121,7 @@ impl Zobrist {
             }
         }
 
-        key
+        self.key = key;
     }
 }
 

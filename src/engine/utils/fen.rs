@@ -1,9 +1,7 @@
-use crate::engine::{
-    game::{
-        board::{self, Board},
-        coord::Coord,
-        piece::{self, Piece},
-    },
+use crate::engine::game::{
+    board::{self, Board},
+    coord::Coord,
+    piece::{self, Piece},
 };
 
 pub const STARTING_FEN: &str = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
@@ -44,7 +42,7 @@ pub fn current_fen(board: &Board, always_show_ep: bool) -> String {
         }
     }
 
-    fen.push_str(&format!(" {}", board.white_to_move));
+    fen.push_str(&format!("{}", board.white_to_move));
     let white_kingside = (board.state.castling_rights & 1) == 1;
     let white_queenside = (board.state.castling_rights >> 1 & 1) == 1;
     let black_kingside = (board.state.castling_rights >> 2 & 1) == 1;
@@ -71,11 +69,14 @@ pub fn current_fen(board: &Board, always_show_ep: bool) -> String {
     let ep_file_idx = board.state.en_passant_file - 1;
     let ep_rank_idx = if board.white_to_move { 5 } else { 2 };
     let ep_coord = Coord::from((ep_file_idx, ep_rank_idx));
-    let ep_name = ep_coord.to_string();
 
     let is_ep = ep_file_idx != -1;
     let include_ep = always_show_ep || ep_capture_possible(ep_file_idx, ep_rank_idx, board);
-    fen.push_str(if is_ep && include_ep { &ep_name } else { "-" });
+    if is_ep && include_ep {
+        fen.push_str(&ep_coord.to_string());
+    } else {
+        fen.push('-');
+    };
 
     fen.push_str(&format!(" {}", board.state.halfmove_clock));
     fen.push_str(&format!(" {}", (board.ply_count / 2) + 1));
@@ -94,14 +95,6 @@ pub fn flip_fen(fen: String) -> Result<String, String> {
         return Err("Malformed Fen: fen string must have at least five distinct sections".into());
     }
     let fen_ranks: Vec<&str> = sections[0].split('/').collect();
-
-    fn invert_case(c: char) -> String {
-        if c.is_uppercase() {
-            c.to_lowercase().to_string()
-        } else {
-            c.to_uppercase().to_string()
-        }
-    }
 
     // Section 1: ranks
     for i in fen_ranks.len() - 1..=0 {
@@ -154,6 +147,7 @@ pub fn flip_fen(fen: String) -> Result<String, String> {
     Ok(flipped_fen)
 }
 
+#[derive(Debug)]
 pub struct PositionInfo {
     pub fen: String,
     pub squares: [i32; 64],
@@ -167,6 +161,23 @@ pub struct PositionInfo {
     pub white_to_move: bool,
     pub halfmove_clock: usize,
     pub move_count: i32,
+}
+
+impl Default for PositionInfo {
+    fn default() -> Self {
+        Self {
+            fen: String::default(),
+            squares: [i32::default(); 64],
+            white_castle_kingside: bool::default(),
+            white_castle_queenside: bool::default(),
+            black_castle_kingside: bool::default(),
+            black_castle_queenside: bool::default(),
+            ep_file: i32::default(),
+            white_to_move: bool::default(),
+            halfmove_clock: usize::default(),
+            move_count: i32::default(),
+        }
+    }
 }
 
 impl PositionInfo {
@@ -242,5 +253,13 @@ impl PositionInfo {
             halfmove_clock: halfmove_clock,
             move_count: move_count,
         })
+    }
+}
+
+fn invert_case(c: char) -> String {
+    if c.is_uppercase() {
+        c.to_lowercase().to_string()
+    } else {
+        c.to_uppercase().to_string()
     }
 }
