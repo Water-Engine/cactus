@@ -1,6 +1,7 @@
 use crate::engine::game::{
     board::{self, Board},
     coord::Coord,
+    r#move::{self, Move},
     piece::{self, Piece},
 };
 
@@ -14,7 +15,7 @@ pub fn position_from_fen(fen: String) -> Result<PositionInfo, String> {
 Get the fen string of the current position
 * Ref: https://en.wikipedia.org/wiki/Forsyth%E2%80%93Edwards_Notation
 */
-pub fn current_fen(board: &Board, always_show_ep: bool) -> String {
+pub fn current_fen(board: &mut Board, always_show_ep: bool) -> String {
     let mut fen = String::new();
     for rank in 7..=0 {
         let mut num_empty_files = 0;
@@ -84,8 +85,54 @@ pub fn current_fen(board: &Board, always_show_ep: bool) -> String {
     fen
 }
 
-fn ep_capture_possible(ep_file_idx: i32, ep_rank_idx: i32, board: &Board) -> bool {
-    todo!("Not implemented")
+fn ep_capture_possible(ep_file_idx: i32, ep_rank_idx: i32, board: &mut Board) -> bool {
+    let capture_from_a = Coord::from((
+        ep_file_idx - 1,
+        ep_rank_idx + board.white_to_move.then(|| -1).unwrap_or(1),
+    ));
+    let capture_from_b = Coord::from((
+        ep_file_idx + 1,
+        ep_rank_idx + board.white_to_move.then(|| -1).unwrap_or(1),
+    ));
+    let ep_capture_square = Coord::from((ep_file_idx, ep_rank_idx)).index();
+    let friendly_pawn = piece::Piece::from((piece::PAWN, board.move_color().to_piece_color()));
+
+    can_capture(
+        &capture_from_a,
+        ep_capture_square,
+        friendly_pawn.value,
+        board,
+    ) || can_capture(
+        &capture_from_b,
+        ep_capture_square,
+        friendly_pawn.value,
+        board,
+    )
+}
+
+fn can_capture(
+    from: &Coord,
+    ep_capture_square: i32,
+    friendly_pawn: i32,
+    board: &mut Board,
+) -> bool {
+    let is_pawn_on_square = board.squares[from.index() as usize] == friendly_pawn;
+    if from.is_valid_square() && is_pawn_on_square {
+        let mv = Move::from((
+            from.index(),
+            ep_capture_square,
+            r#move::EN_PASSANT_CAPTURE_FLAG,
+        ));
+        board.make_move(mv, false);
+        board.make_null_move();
+        let was_legal = !board.calculate_in_check_state();
+
+        board.unmake_null_move();
+        board.unmake_move(mv, false);
+        return was_legal;
+    }
+
+    false
 }
 
 pub fn flip_fen(fen: String) -> Result<String, String> {
@@ -147,7 +194,7 @@ pub fn flip_fen(fen: String) -> Result<String, String> {
     Ok(flipped_fen)
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct PositionInfo {
     pub fen: String,
     pub squares: [i32; 64],

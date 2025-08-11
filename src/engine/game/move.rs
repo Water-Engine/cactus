@@ -21,7 +21,7 @@ Compact Move Representation (ffffttttttssssss)
 * Bits 6-11: target square index
 * Bits 12-15: flag (promotion type, etc)
 */
-#[derive(Debug, Eq, PartialEq)]
+#[derive(Debug, Eq, PartialEq, Clone, Copy)]
 pub struct Move {
     pub value: u16,
 }
