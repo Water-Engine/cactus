@@ -62,7 +62,7 @@ impl Color {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct Board {
     pub squares: [i32; 64],
     pub king_squares: [i32; 2],
@@ -687,7 +687,7 @@ impl Board {
                 ));
 
                 if include_fen {
-                    diagram.push_str(&format!("Fen         : {}\n", fen::current_fen(self, true)));
+                    diagram.push_str(&format!("Fen         : {}\n", self.current_fen(true)));
                 }
 
                 if include_zobrist {

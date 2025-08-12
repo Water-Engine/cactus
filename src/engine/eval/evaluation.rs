@@ -28,34 +28,32 @@ const ENDGAME_START_WEIGHT: i32 = 2 * ROOK_ENDGAME_WEIGHT
 const ENDGAME_MATERIAL_START: f32 = (ROOK_VALUE * 2 + BISHOP_VALUE + KNIGHT_VALUE) as f32;
 const ENDGAME_MULTIPLIER: f32 = 1.0 / ENDGAME_MATERIAL_START;
 
-pub struct Evaluation {
-    board: Board,
+struct Evaluation {
     pub white_eval: EvaluationData,
     pub black_eval: EvaluationData,
 }
 
-impl Evaluation {
-    pub fn evaluate(board: &Board) -> i32 {
-        let mut eval = Self {
-            board: board.clone(),
+impl Board {
+        pub fn evaluate(&self) -> i32 {
+        let mut eval = Evaluation {
             white_eval: EvaluationData::default(),
             black_eval: EvaluationData::default(),
         };
 
-        let white_material = eval.get_material_info(Color::White);
-        let black_material = eval.get_material_info(Color::Black);
+        let white_material = eval.get_material_info(&self, Color::White);
+        let black_material = eval.get_material_info(&self, Color::Black);
 
         eval.white_eval.material_score = white_material.material_score;
         eval.black_eval.material_score = black_material.material_score;
 
         eval.white_eval.piece_square_score =
-            eval.evaluate_piece_square_tables(true, black_material.endgame_t);
+            eval.evaluate_piece_square_tables(&self, true, black_material.endgame_t);
         eval.black_eval.piece_square_score =
-            eval.evaluate_piece_square_tables(false, white_material.endgame_t);
+            eval.evaluate_piece_square_tables(&self, false, white_material.endgame_t);
 
         // moving king to push enemy king at end of winning game is good
-        eval.white_eval.mop_up_score = eval.mop_up_eval(true, &white_material, &black_material);
-        eval.black_eval.mop_up_score = eval.mop_up_eval(false, &black_material, &white_material);
+        eval.white_eval.mop_up_score = eval.mop_up_eval(&self, true, &white_material, &black_material);
+        eval.black_eval.mop_up_score = eval.mop_up_eval(&self, false, &black_material, &white_material);
 
         eval.white_eval.pawn_score = eval.evaluate_pawns(Color::White);
         eval.black_eval.pawn_score = eval.evaluate_pawns(Color::Black);
@@ -71,11 +69,13 @@ impl Evaluation {
             eval.white_eval.piece_square_score as f32,
         );
 
-        let perspective = eval.board.white_to_move.then(|| 1).unwrap_or(-1);
+        let perspective = self.white_to_move.then(|| 1).unwrap_or(-1);
         let eval = eval.white_eval.sum() - eval.black_eval.sum();
         eval * perspective
     }
+}
 
+impl Evaluation {
     pub fn king_pawn_shield(
         &self,
         color: Color,
@@ -95,6 +95,7 @@ impl Evaluation {
 
     fn mop_up_eval(
         &self,
+        board: &Board,
         is_white: bool,
         my_material: &MaterialInfo,
         enemy_material: &MaterialInfo,
@@ -106,8 +107,8 @@ impl Evaluation {
             let friendly_idx = is_white.then(|| Color::White).unwrap_or(Color::Black) as usize;
             let opponent_idx = is_white.then(|| Color::Black).unwrap_or(Color::White) as usize;
 
-            let friendly_king_square = self.board.king_squares[friendly_idx];
-            let opponent_king_square = self.board.king_squares[opponent_idx];
+            let friendly_king_square = board.king_squares[friendly_idx];
+            let opponent_king_square = board.king_squares[opponent_idx];
 
             todo!("Not implemented")
         } else {
@@ -115,56 +116,56 @@ impl Evaluation {
         }
     }
 
-    fn count_material(&self, color: Color) -> i32 {
+    fn count_material(&self, board: &Board, color: Color) -> i32 {
         let color_idx = color as usize;
         let mut material = 0;
 
-        material += self.board.pawns[color_idx].count() as i32 * PAWN_VALUE;
-        material += self.board.knights[color_idx].count() as i32 * KNIGHT_VALUE;
-        material += self.board.bishops[color_idx].count() as i32 * BISHOP_VALUE;
-        material += self.board.rooks[color_idx].count() as i32 * ROOK_VALUE;
-        material += self.board.queens[color_idx].count() as i32 * QUEEN_VALUE;
+        material += board.pawns[color_idx].count() as i32 * PAWN_VALUE;
+        material += board.knights[color_idx].count() as i32 * KNIGHT_VALUE;
+        material += board.bishops[color_idx].count() as i32 * BISHOP_VALUE;
+        material += board.rooks[color_idx].count() as i32 * ROOK_VALUE;
+        material += board.queens[color_idx].count() as i32 * QUEEN_VALUE;
 
         material
     }
 
-    fn evaluate_piece_square_tables(&self, is_white: bool, endgame_t: f32) -> i32 {
+    fn evaluate_piece_square_tables(&self, board: &Board, is_white: bool, endgame_t: f32) -> i32 {
         let mut value = 0;
         let color_idx = is_white.then(|| Color::White).unwrap_or(Color::Black) as usize;
 
         // Major piece states
         value += Self::evaluate_piece_square_table(
             precomputed_evals::ROOKS,
-            self.board.rooks[color_idx],
+            board.rooks[color_idx],
             is_white,
         );
         value += Self::evaluate_piece_square_table(
             precomputed_evals::KNIGHTS,
-            self.board.knights[color_idx],
+            board.knights[color_idx],
             is_white,
         );
         value += Self::evaluate_piece_square_table(
             precomputed_evals::BISHOPS,
-            self.board.bishops[color_idx],
+            board.bishops[color_idx],
             is_white,
         );
         value += Self::evaluate_piece_square_table(
             precomputed_evals::QUEENS,
-            self.board.queens[color_idx],
+            board.queens[color_idx],
             is_white,
         );
 
         // Pawn states
         let pawn_early_phase = Self::evaluate_piece_square_table(
             precomputed_evals::PAWNS,
-            self.board.pawns[color_idx],
+            board.pawns[color_idx],
             is_white,
         );
         value += (pawn_early_phase as f32 * (1.0 - endgame_t)) as i32;
 
         let pawn_late_phase = Self::evaluate_piece_square_table(
             precomputed_evals::PAWNS_ENDGAME,
-            self.board.pawns[color_idx],
+            board.pawns[color_idx],
             is_white,
         );
         value += (pawn_late_phase as f32 * endgame_t) as i32;
@@ -172,14 +173,14 @@ impl Evaluation {
         // King states
         let king_early_phase = precomputed_evals::read(
             precomputed_evals::KING_START,
-            self.board.king_squares[color_idx],
+            board.king_squares[color_idx],
             is_white,
         );
         value += (king_early_phase as f32 * (1.0 - endgame_t)) as i32;
 
         let king_late_phase = precomputed_evals::read(
             precomputed_evals::KING_ENDGAME,
-            self.board.king_squares[color_idx],
+            board.king_squares[color_idx],
             is_white,
         );
         value += (king_late_phase as f32 * endgame_t) as i32;
@@ -195,14 +196,14 @@ impl Evaluation {
         value
     }
 
-    fn get_material_info(&self, color: Color) -> MaterialInfo {
+    fn get_material_info(&self, board: &Board, color: Color) -> MaterialInfo {
         let color_idx = color as usize;
 
-        let num_pawns = self.board.pawns[color_idx].count() as i32;
-        let num_knights = self.board.knights[color_idx].count() as i32;
-        let num_bishops = self.board.bishops[color_idx].count() as i32;
-        let num_rooks = self.board.rooks[color_idx].count() as i32;
-        let num_queens = self.board.queens[color_idx].count() as i32;
+        let num_pawns = board.pawns[color_idx].count() as i32;
+        let num_knights = board.knights[color_idx].count() as i32;
+        let num_bishops = board.bishops[color_idx].count() as i32;
+        let num_rooks = board.rooks[color_idx].count() as i32;
+        let num_queens = board.queens[color_idx].count() as i32;
 
         let my_color = color.to_piece_color();
         let enemy_color = (my_color == piece::WHITE)
@@ -210,9 +211,9 @@ impl Evaluation {
             .unwrap_or(piece::WHITE);
 
         let my_pawns =
-            self.board.piece_bbs[piece::Piece::from((piece::PAWN, my_color)).value as usize];
+            board.piece_bbs[piece::Piece::from((piece::PAWN, my_color)).value as usize];
         let enemy_pawns =
-            self.board.piece_bbs[piece::Piece::from((piece::PAWN, enemy_color)).value as usize];
+            board.piece_bbs[piece::Piece::from((piece::PAWN, enemy_color)).value as usize];
 
         MaterialInfo::new(
             num_pawns,

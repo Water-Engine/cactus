@@ -11,128 +11,128 @@ pub fn position_from_fen(fen: String) -> Result<PositionInfo, String> {
     PositionInfo::new(fen)
 }
 
-/**
-Get the fen string of the current position
-* Ref: https://en.wikipedia.org/wiki/Forsyth%E2%80%93Edwards_Notation
-*/
-pub fn current_fen(board: &mut Board, always_show_ep: bool) -> String {
-    let mut fen = String::new();
-    for rank in 7..=0 {
-        let mut num_empty_files = 0;
-        for file in 0..8 {
-            let i = Coord::from((file, rank)).index();
-            let current_piece = board.squares[i as usize];
-            if current_piece != piece::NONE {
-                if num_empty_files != 0 {
-                    fen.push_str(&num_empty_files.to_string());
-                    num_empty_files = 0;
-                }
+impl Board {
+    /**
+    Get the fen string of the current position
+    * Ref: https://en.wikipedia.org/wiki/Forsyth%E2%80%93Edwards_Notation
+    */
+    pub fn current_fen(&mut self, always_show_ep: bool) -> String {
+        let mut fen = String::new();
+        for rank in 7..=0 {
+            let mut num_empty_files = 0;
+            for file in 0..8 {
+                let i = Coord::from((file, rank)).index();
+                let current_piece = self.squares[i as usize];
+                if current_piece != piece::NONE {
+                    if num_empty_files != 0 {
+                        fen.push_str(&num_empty_files.to_string());
+                        num_empty_files = 0;
+                    }
 
-                let current_piece = piece::Piece::from(current_piece);
-                fen.push(current_piece.into());
-            } else {
-                num_empty_files += 1;
+                    let current_piece = piece::Piece::from(current_piece);
+                    fen.push(current_piece.into());
+                } else {
+                    num_empty_files += 1;
+                }
+            }
+
+            if num_empty_files != 0 {
+                fen.push_str(&num_empty_files.to_string());
+            }
+            if rank != 0 {
+                fen.push('/');
             }
         }
 
-        if num_empty_files != 0 {
-            fen.push_str(&num_empty_files.to_string());
+        fen.push_str(&format!("{}", self.white_to_move));
+        let white_kingside = (self.state.castling_rights & 1) == 1;
+        let white_queenside = (self.state.castling_rights >> 1 & 1) == 1;
+        let black_kingside = (self.state.castling_rights >> 2 & 1) == 1;
+        let black_queenside = (self.state.castling_rights >> 3 & 1) == 1;
+
+        fen.push(' ');
+        if white_kingside {
+            fen.push('K');
         }
-        if rank != 0 {
-            fen.push('/');
+        if white_queenside {
+            fen.push('Q');
         }
+        if black_kingside {
+            fen.push('k');
+        }
+        if black_queenside {
+            fen.push('q');
+        }
+        if self.state.castling_rights == 0 {
+            fen.push('-');
+        }
+
+        fen.push(' ');
+        let ep_file_idx = self.state.en_passant_file - 1;
+        let ep_rank_idx = if self.white_to_move { 5 } else { 2 };
+        let ep_coord = Coord::from((ep_file_idx, ep_rank_idx));
+
+        let is_ep = ep_file_idx != -1;
+        let include_ep = always_show_ep || self.ep_capture_possible(ep_file_idx, ep_rank_idx);
+        if is_ep && include_ep {
+            fen.push_str(&ep_coord.to_string());
+        } else {
+            fen.push('-');
+        };
+
+        fen.push_str(&format!(" {}", self.state.halfmove_clock));
+        fen.push_str(&format!(" {}", (self.ply_count / 2) + 1));
+
+        fen
     }
 
-    fen.push_str(&format!("{}", board.white_to_move));
-    let white_kingside = (board.state.castling_rights & 1) == 1;
-    let white_queenside = (board.state.castling_rights >> 1 & 1) == 1;
-    let black_kingside = (board.state.castling_rights >> 2 & 1) == 1;
-    let black_queenside = (board.state.castling_rights >> 3 & 1) == 1;
-
-    fen.push(' ');
-    if white_kingside {
-        fen.push('K');
-    }
-    if white_queenside {
-        fen.push('Q');
-    }
-    if black_kingside {
-        fen.push('k');
-    }
-    if black_queenside {
-        fen.push('q');
-    }
-    if board.state.castling_rights == 0 {
-        fen.push('-');
-    }
-
-    fen.push(' ');
-    let ep_file_idx = board.state.en_passant_file - 1;
-    let ep_rank_idx = if board.white_to_move { 5 } else { 2 };
-    let ep_coord = Coord::from((ep_file_idx, ep_rank_idx));
-
-    let is_ep = ep_file_idx != -1;
-    let include_ep = always_show_ep || ep_capture_possible(ep_file_idx, ep_rank_idx, board);
-    if is_ep && include_ep {
-        fen.push_str(&ep_coord.to_string());
-    } else {
-        fen.push('-');
-    };
-
-    fen.push_str(&format!(" {}", board.state.halfmove_clock));
-    fen.push_str(&format!(" {}", (board.ply_count / 2) + 1));
-
-    fen
-}
-
-fn ep_capture_possible(ep_file_idx: i32, ep_rank_idx: i32, board: &mut Board) -> bool {
-    let capture_from_a = Coord::from((
-        ep_file_idx - 1,
-        ep_rank_idx + board.white_to_move.then(|| -1).unwrap_or(1),
-    ));
-    let capture_from_b = Coord::from((
-        ep_file_idx + 1,
-        ep_rank_idx + board.white_to_move.then(|| -1).unwrap_or(1),
-    ));
-    let ep_capture_square = Coord::from((ep_file_idx, ep_rank_idx)).index();
-    let friendly_pawn = piece::Piece::from((piece::PAWN, board.move_color().to_piece_color()));
-
-    can_capture(
-        &capture_from_a,
-        ep_capture_square,
-        friendly_pawn.value,
-        board,
-    ) || can_capture(
-        &capture_from_b,
-        ep_capture_square,
-        friendly_pawn.value,
-        board,
-    )
-}
-
-fn can_capture(
-    from: &Coord,
-    ep_capture_square: i32,
-    friendly_pawn: i32,
-    board: &mut Board,
-) -> bool {
-    let is_pawn_on_square = board.squares[from.index() as usize] == friendly_pawn;
-    if from.is_valid_square() && is_pawn_on_square {
-        let mv = Move::from((
-            from.index(),
-            ep_capture_square,
-            r#move::EN_PASSANT_CAPTURE_FLAG,
+    fn ep_capture_possible(&mut self, ep_file_idx: i32, ep_rank_idx: i32) -> bool {
+        let capture_from_a = Coord::from((
+            ep_file_idx - 1,
+            ep_rank_idx + self.white_to_move.then(|| -1).unwrap_or(1),
         ));
-        board.make_move(mv, false);
-        board.make_null_move();
-        let was_legal = !board.calculate_in_check_state();
+        let capture_from_b = Coord::from((
+            ep_file_idx + 1,
+            ep_rank_idx + self.white_to_move.then(|| -1).unwrap_or(1),
+        ));
+        let ep_capture_square = Coord::from((ep_file_idx, ep_rank_idx)).index();
+        let friendly_pawn = piece::Piece::from((piece::PAWN, self.move_color().to_piece_color()));
 
-        board.unmake_null_move();
-        board.unmake_move(mv, false);
-        return was_legal;
+        self.can_capture(
+            &capture_from_a,
+            ep_capture_square,
+            friendly_pawn.value,
+        ) || self.can_capture(
+            &capture_from_b,
+            ep_capture_square,
+            friendly_pawn.value,
+        )
     }
 
-    false
+    fn can_capture(
+        &mut self,
+        from: &Coord,
+        ep_capture_square: i32,
+        friendly_pawn: i32,
+    ) -> bool {
+        let is_pawn_on_square = self.squares[from.index() as usize] == friendly_pawn;
+        if from.is_valid_square() && is_pawn_on_square {
+            let mv = Move::from((
+                from.index(),
+                ep_capture_square,
+                r#move::EN_PASSANT_CAPTURE_FLAG,
+            ));
+            self.make_move(mv, false);
+            self.make_null_move();
+            let was_legal = !self.calculate_in_check_state();
+
+            self.unmake_null_move();
+            self.unmake_move(mv, false);
+            return was_legal;
+        }
+
+        false
+    }
 }
 
 pub fn flip_fen(fen: String) -> Result<String, String> {
