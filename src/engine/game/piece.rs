@@ -60,7 +60,6 @@ impl From<i32> for Piece {
 
 impl From<(i32, i32)> for Piece {
     fn from((r#type, color): (i32, i32)) -> Self {
-        
         Self {
             value: r#type | color,
         }

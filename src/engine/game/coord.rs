@@ -1,6 +1,8 @@
+use std::ops::{Add, Mul, Sub};
+
 use crate::engine::game::board::{FILE_NAMES, RANK_NAMES};
 
-#[derive(Debug, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Clone, Copy)]
 pub struct Coord {
     pub file_idx: i32,
     pub rank_idx: i32,
@@ -94,5 +96,53 @@ impl Coord {
 
     pub fn file_of_square(square_idx: i32) -> i32 {
         square_idx & 0b000111
+    }
+}
+
+impl Add for Coord {
+    type Output = Coord;
+
+    fn add(self, rhs: Self) -> Self::Output {
+        Coord::from((self.file_idx + rhs.file_idx, self.rank_idx + rhs.rank_idx))
+    }
+}
+
+impl Add for &Coord {
+    type Output = Coord;
+
+    fn add(self, rhs: Self) -> Self::Output {
+        Coord::from((self.file_idx + rhs.file_idx, self.rank_idx + rhs.rank_idx))
+    }
+}
+
+impl Sub for Coord {
+    type Output = Coord;
+
+    fn sub(self, rhs: Self) -> Self::Output {
+        Coord::from((self.file_idx - rhs.file_idx, self.rank_idx - rhs.rank_idx))
+    }
+}
+
+impl Sub for &Coord {
+    type Output = Coord;
+
+    fn sub(self, rhs: Self) -> Self::Output {
+        Coord::from((self.file_idx - rhs.file_idx, self.rank_idx - rhs.rank_idx))
+    }
+}
+
+impl Mul<i32> for Coord {
+    type Output = Coord;
+
+    fn mul(self, rhs: i32) -> Self::Output {
+        Coord::from((self.file_idx * rhs, self.rank_idx * rhs))
+    }
+}
+
+impl Mul<i32> for &Coord {
+    type Output = Coord;
+
+    fn mul(self, rhs: i32) -> Self::Output {
+        Coord::from((self.file_idx * rhs, self.rank_idx * rhs))
     }
 }

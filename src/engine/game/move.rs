@@ -123,7 +123,7 @@ impl Move {
     pub fn to_uci(&self) -> String {
         let start_square_name = Coord::new(self.start_square()).to_string();
         let target_square_name = Coord::new(self.target_square()).to_string();
-        let mut move_name  = start_square_name + &target_square_name;
+        let mut move_name = start_square_name + &target_square_name;
 
         if self.is_promotion() {
             match self.move_flag() {

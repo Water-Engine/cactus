@@ -1,6 +1,5 @@
 pub mod driver;
 
-pub mod book;
 pub mod eval;
 pub mod game;
 pub mod generate;

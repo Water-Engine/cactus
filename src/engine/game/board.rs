@@ -47,7 +47,7 @@ pub const F8: i32 = 61;
 pub const G8: i32 = 62;
 pub const H8: i32 = 63;
 
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, PartialEq, Eq)]
 pub enum Color {
     White = 0,
     Black = 1,
@@ -62,7 +62,7 @@ impl Color {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Board {
     pub squares: [i32; 64],
     pub king_squares: [i32; 2],
@@ -367,7 +367,8 @@ impl Board {
 
         if undoing_capture {
             let mut capture_square = moved_to;
-            let captured_piece = piece::Piece::from((captured_piece_type, opponent_color.to_piece_color()));
+            let captured_piece =
+                piece::Piece::from((captured_piece_type, opponent_color.to_piece_color()));
 
             if undoing_ep {
                 capture_square = moved_to + undoing_white.then(|| -8).unwrap_or(8);
@@ -376,8 +377,11 @@ impl Board {
             if captured_piece_type != piece::PAWN {
                 self.total_heavy_material += 1;
             }
-        
-            BitBoard::toggle_square(&mut self.piece_bbs[captured_piece.value as usize], capture_square);
+
+            BitBoard::toggle_square(
+                &mut self.piece_bbs[captured_piece.value as usize],
+                capture_square,
+            );
             BitBoard::toggle_square(&mut self.color_bbs[opponent_color as usize], capture_square);
             self.all_piece_lists[captured_piece.value as usize].add_piece(capture_square);
             self.squares[captured_piece.value as usize] = captured_piece.value;
@@ -389,18 +393,28 @@ impl Board {
             if move_flag == r#move::CASTLE_FLAG {
                 let rook_piece = piece::Piece::from((piece::ROOK, move_color.to_piece_color()));
                 let kingside = moved_to == G1 || moved_to == G8;
-                let rook_square_before_castle = kingside.then(|| moved_to + 1).unwrap_or(moved_to - 2);
-                let rook_square_after_castle = kingside.then(|| moved_to - 1).unwrap_or(moved_to + 1);
-            
-                BitBoard::toggle_squares(&mut self.piece_bbs[rook_piece.value as usize], &[rook_square_after_castle, rook_square_before_castle]);
-                BitBoard::toggle_squares(&mut self.color_bbs[move_color as usize], &[rook_square_after_castle, rook_square_before_castle]);
+                let rook_square_before_castle =
+                    kingside.then(|| moved_to + 1).unwrap_or(moved_to - 2);
+                let rook_square_after_castle =
+                    kingside.then(|| moved_to - 1).unwrap_or(moved_to + 1);
+
+                BitBoard::toggle_squares(
+                    &mut self.piece_bbs[rook_piece.value as usize],
+                    &[rook_square_after_castle, rook_square_before_castle],
+                );
+                BitBoard::toggle_squares(
+                    &mut self.color_bbs[move_color as usize],
+                    &[rook_square_after_castle, rook_square_before_castle],
+                );
                 self.squares[rook_square_after_castle as usize] = piece::NONE;
                 self.squares[rook_square_before_castle as usize] = rook_piece.value;
-                self.all_piece_lists[rook_piece.value as usize].move_piece(rook_square_after_castle, rook_square_before_castle)
+                self.all_piece_lists[rook_piece.value as usize]
+                    .move_piece(rook_square_after_castle, rook_square_before_castle)
             }
         }
 
-        self.all_piece_bb = self.color_bbs[Color::White as usize] | self.color_bbs[Color::Black as usize];
+        self.all_piece_bb =
+            self.color_bbs[Color::White as usize] | self.color_bbs[Color::Black as usize];
         self.update_slider_bbs();
 
         if !in_search && self.repetition_history.len() > 0 {
@@ -415,7 +429,6 @@ impl Board {
         self.state = *self.game_state_history.back().unwrap_or(&State::default());
         self.ply_count -= 1;
         self.has_cached_in_check_value = false;
-
     }
 
     pub fn make_null_move(&mut self) {
@@ -428,7 +441,13 @@ impl Board {
         self.state.zobrist.key = new_zobrist_key;
         let new_zobrist = self.state.zobrist;
 
-        let new_state = State::new(piece::NONE, 0, self.state.castling_rights, self.state.halfmove_clock + 1, new_zobrist);
+        let new_state = State::new(
+            piece::NONE,
+            0,
+            self.state.castling_rights,
+            self.state.halfmove_clock + 1,
+            new_zobrist,
+        );
         self.state = new_state;
         self.game_state_history.push_back(self.state);
         self.update_slider_bbs();
@@ -452,7 +471,6 @@ impl Board {
             self.has_cached_in_check_value = true;
         }
         self.cached_in_check_value
-
     }
 
     pub fn calculate_in_check_state(&self) -> bool {
@@ -621,7 +639,12 @@ impl Board {
         self.diagram(self.white_to_move, true, true)
     }
 
-    pub fn diagram(&mut self, black_at_top: bool, include_fen: bool, include_zobrist: bool) -> String {
+    pub fn diagram(
+        &mut self,
+        black_at_top: bool,
+        include_fen: bool,
+        include_zobrist: bool,
+    ) -> String {
         let mut diagram = String::new();
         let last_move_square = if self.all_moves.len() > 0 {
             self.all_moves[self.all_moves.len() - 1].target_square()

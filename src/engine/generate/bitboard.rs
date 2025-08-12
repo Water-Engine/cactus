@@ -149,16 +149,12 @@ impl BitBoard {
                 let diag_y = y + DIAG_DIR[dir_idx].1 * dst;
 
                 match Self::valid_square_idx(ortho_x, ortho_y) {
-                    Some(target_idx) if dst == 1 => {
-                        self.king_moves[square_idx] |= 1 << target_idx
-                    }
+                    Some(target_idx) if dst == 1 => self.king_moves[square_idx] |= 1 << target_idx,
                     _ => {}
                 }
 
                 match Self::valid_square_idx(diag_x, diag_y) {
-                    Some(target_idx) if dst == 1 => {
-                        self.king_moves[square_idx] |= 1 << target_idx
-                    }
+                    Some(target_idx) if dst == 1 => self.king_moves[square_idx] |= 1 << target_idx,
                     _ => {}
                 }
             }
@@ -185,7 +181,6 @@ impl BitBoard {
 
             if let Some(black_pawn_left) = Self::valid_square_idx(x + 1, y + 1) {
                 self.black_pawn_attacks[square_idx] |= 1 << black_pawn_left;
-                  
             }
         }
     }
