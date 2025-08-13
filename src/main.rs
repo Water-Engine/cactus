@@ -65,19 +65,18 @@ fn main() {
         }
     }
 
-    // gui::launch::launch(maybe_white_engine, maybe_black_engine);
-    let mut board = crate::engine::game::board::Board::new();
-    board.load_start_pos();
-    println!("White to Move: {}", board.white_to_move);
-    let repr = board.diagram(false, true, true);
-    println!("{repr}");
+    gui::launch::launch(maybe_white_engine, maybe_black_engine);
+    // let mut board = crate::engine::game::board::Board::new();
+    // board.load_start_pos();
+    // let repr = board.to_string();
+    // println!("{repr}");
     // let (moves, _) = board.generate_moves(false);
     // for i in 0..moves.len() {
     //     let mv = moves[i];
     //     let repr = format!("Move {}:\n\tStart: {}\n\tTarget: {}\n\tFlag: {}\n", i, mv.start_square(), mv.target_square(), mv.move_flag());
     //     board.make_move(mv, false);
     //     println!("{repr}");
-    //     println!("{}", board.diagram(false, true, true));
+    //     println!("{}", board.diagram(true, true, true));
     //     board.unmake_move(mv, false);
     //     println!("\n");
     // }
