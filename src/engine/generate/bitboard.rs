@@ -38,6 +38,12 @@ const KNIGHT_JUMPS: [(i32, i32); 8] = [
     (-1, -2),
 ];
 
+static BITMASKS: OnceLock<BitMasks> = OnceLock::new();
+
+pub fn get_bitmasks() -> &'static BitMasks {
+    BITMASKS.get_or_init(BitMasks::new)
+}
+
 #[derive(Debug)]
 pub struct BitMasks {
     pub white_passed_pawn: [u64; 64],
@@ -57,14 +63,8 @@ pub struct BitMasks {
     pub triple_file: [u64; 8],
 }
 
-impl Default for BitMasks {
-    fn default() -> Self {
-        BitMasks::new()
-    }
-}
-
 impl BitMasks {
-    pub fn new() -> Self {
+    fn new() -> Self {
         let mut file_mask = [u64::default(); 8];
         let mut adj_file_mask = [u64::default(); 8];
 
@@ -122,14 +122,8 @@ pub struct BitBoard {
     pub black_pawn_attacks: [u64; 64],
 }
 
-impl Default for BitBoard {
-    fn default() -> Self {
-        BitBoard::new()
-    }
-}
-
 impl BitBoard {
-    pub fn new() -> Self {
+    fn new() -> Self {
         let mut bb = Self {
             knight_attacks: [u64::default(); 64],
             king_moves: [u64::default(); 64],

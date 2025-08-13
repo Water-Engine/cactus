@@ -1,3 +1,5 @@
+use std::sync::OnceLock;
+
 use crate::engine::game::{board::Color, coord::Coord, piece};
 
 pub const PAWNS: [i32; 64] = [
@@ -45,12 +47,18 @@ pub const KING_ENDGAME: [i32; 64] = [
     25, 20, -20, -25, -30, -25, 0, 0, 0, 0, -25, -30, -50, -30, -30, -30, -30, -30, -30, -50,
 ];
 
+static PIECE_SQUARE_TABLE: OnceLock<PieceSquareTable> = OnceLock::new();
+
+pub fn get_pst() -> &'static PieceSquareTable {
+    PIECE_SQUARE_TABLE.get_or_init(PieceSquareTable::new)
+}
+
 pub struct PieceSquareTable {
     tables: [[i32; 64]; piece::MAX_PIECE_INDEX + 1],
 }
 
 impl PieceSquareTable {
-    pub fn new() -> Self {
+    fn new() -> Self {
         let mut tables = [[i32::default(); 64]; piece::MAX_PIECE_INDEX + 1];
 
         tables[piece::Piece::from(((piece::PAWN, piece::WHITE))).value as usize] = PAWNS;
@@ -101,12 +109,18 @@ fn get_flipped_table(table: [i32; 64]) -> [i32; 64] {
     flipped_table
 }
 
+static PRECOMPUTED_EVAL_DATA: OnceLock<PrecomputedEvalData> = OnceLock::new();
+
+pub fn get_ped() -> &'static PrecomputedEvalData {
+    PRECOMPUTED_EVAL_DATA.get_or_init(PrecomputedEvalData::new)
+}
+
 pub struct PrecomputedEvalData {
     pub pawn_shield_squares: [[Vec<i32>; 64]; 2],
 }
 
 impl PrecomputedEvalData {
-    pub fn new() -> Self {
+    fn new() -> Self {
         let mut data = Self {
             pawn_shield_squares: std::array::from_fn(|_| std::array::from_fn(|_| Vec::new())),
         };

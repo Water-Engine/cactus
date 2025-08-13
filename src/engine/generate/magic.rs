@@ -20,7 +20,7 @@ pub struct Magic {
 }
 
 impl Magic {
-    pub fn new() -> Self {
+    fn new() -> Self {
         let mut rook_mask = [u64::default(); 64];
         let mut bishop_mask = [u64::default(); 64];
 

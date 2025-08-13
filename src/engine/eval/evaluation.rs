@@ -2,9 +2,10 @@ use crate::engine::{
     eval::precomputed_evals::{self, PieceSquareTable},
     game::{
         board::{Board, Color},
+        coord::Coord,
         piece::{self, PieceList},
     },
-    generate::move_generator,
+    generate::{bitboard, move_generator},
 };
 
 pub const PAWN_VALUE: i32 = 100;
@@ -58,15 +59,17 @@ impl Board {
         eval.black_eval.mop_up_score =
             eval.mop_up_eval(&self, false, &black_material, &white_material);
 
-        eval.white_eval.pawn_score = eval.evaluate_pawns(Color::White);
-        eval.black_eval.pawn_score = eval.evaluate_pawns(Color::Black);
+        eval.white_eval.pawn_score = eval.evaluate_pawns(&self, Color::White);
+        eval.black_eval.pawn_score = eval.evaluate_pawns(&self, Color::Black);
 
         eval.white_eval.pawn_shield_score = eval.king_pawn_shield(
+            &self,
             Color::White,
             &black_material,
             eval.black_eval.piece_square_score as f32,
         );
         eval.black_eval.pawn_shield_score = eval.king_pawn_shield(
+            &self,
             Color::Black,
             &white_material,
             eval.white_eval.piece_square_score as f32,
@@ -81,15 +84,111 @@ impl Board {
 impl Evaluation {
     pub fn king_pawn_shield(
         &self,
+        board: &Board,
         color: Color,
         enemy_material: &MaterialInfo,
         enemy_piece_square_score: f32,
     ) -> i32 {
-        todo!("Not implemented")
+        if enemy_material.endgame_t >= 1.0 {
+            return 0;
+        }
+
+        let mut penalty = 0;
+
+        let is_white = color == Color::White;
+        let friendly_pawn = piece::Piece::from((piece::PAWN, is_white));
+        let king_square = board.king_squares[color as usize];
+        let king_file = Coord::file_of_square(king_square);
+
+        let mut uncastled_king_penalty = 0;
+
+        if king_file <= 2 || king_file >= 5 {
+            let white_pawn_shields = &precomputed_evals::get_ped().pawn_shield_squares[Color::White as usize][king_square as usize];
+            let black_pawn_shields = &precomputed_evals::get_ped().pawn_shield_squares[Color::Black as usize][king_square as usize];
+            let squares = is_white.then(|| white_pawn_shields).unwrap_or(black_pawn_shields);
+
+            for i in 0..(squares.len() / 2) {
+                let shield_square_idx = squares[i];
+                if board.squares[shield_square_idx as usize] != friendly_pawn.value {
+                    if squares.len() > 3 && board.squares[squares[i + 3] as usize] == friendly_pawn.value {
+                        penalty += KING_PAWN_SHIELD_SCORES[i + 3];
+                    } else {
+                        penalty += KING_PAWN_SHIELD_SCORES[i];
+                    }
+                }
+            }
+            penalty *= penalty;
+        } else {
+            let enemy_development_score = ((enemy_piece_square_score + 10.0) / 130.0).clamp(0.0, 1.0);
+            uncastled_king_penalty = 50 * enemy_development_score as i32;
+        }
+
+        let mut open_file_against_king_penalty = 0;
+
+        if enemy_material.num_rooks > 1 || (enemy_material.num_rooks > 0 && enemy_material.num_queens > 0) {
+            let clamped_king_file = king_file.clamp(1, 6);
+            let my_pawns = enemy_material.enemy_pawns;
+
+            for attack_file in clamped_king_file..=(clamped_king_file + 1) {
+                let file_mask = bitboard::get_bitmasks().file[attack_file as usize];
+                let is_king_file = attack_file == king_file;
+
+                if (enemy_material.pawns & file_mask) == 0 {
+                    open_file_against_king_penalty += is_king_file.then(|| 25).unwrap_or(15);
+                    if (my_pawns & file_mask) == 0 {
+                        open_file_against_king_penalty += is_king_file.then(|| 15).unwrap_or(10);
+                    }
+                }
+            }
+        }
+
+        let mut pawn_shield_weight = 1.0 - enemy_material.endgame_t;
+        if board.queens[1 - color as usize].count() == 0 {
+            pawn_shield_weight *= 0.6;
+        }
+
+        (-penalty - uncastled_king_penalty - open_file_against_king_penalty) * pawn_shield_weight as i32
     }
 
-    pub fn evaluate_pawns(&self, color: Color) -> i32 {
-        todo!("Not implemented")
+    pub fn evaluate_pawns(&self, board: &Board, color: Color) -> i32 {
+        let pawns = board.pawns[color as usize];
+        let is_white = color == Color::White;
+        let opponent_pawns = board.piece_bbs[piece::Piece::from((
+            piece::PAWN,
+            is_white.then(|| piece::BLACK).unwrap_or(piece::WHITE),
+        ))
+        .value as usize];
+        let friendly_pawns = board.piece_bbs[piece::Piece::from((
+            piece::PAWN,
+            is_white.then(|| piece::WHITE).unwrap_or(piece::BLACK),
+        ))
+        .value as usize];
+        let masks = is_white
+            .then(|| bitboard::get_bitmasks().white_passed_pawn)
+            .unwrap_or(bitboard::get_bitmasks().black_passed_pawn);
+
+        let mut bonus = 0;
+        let mut num_isolated_pawns = 0;
+
+        for i in 0..pawns.count() {
+            let square = pawns[i];
+            let passed_mask = masks[square as usize];
+
+            if (opponent_pawns & passed_mask) == 0 {
+                let rank = Coord::rank_of_square(square);
+                let num_squares_from_promotion = is_white.then(|| 7 - rank).unwrap_or(rank);
+                bonus += PASSED_PAWN_BONUSES[num_squares_from_promotion as usize];
+            }
+
+            if (friendly_pawns
+                & bitboard::get_bitmasks().adj_file[Coord::file_of_square(square) as usize])
+                == 0
+            {
+                num_isolated_pawns += 1;
+            }
+        }
+
+        bonus + ISOLATED_PAWN_PENALTY_BY_COUNT[num_isolated_pawns as usize]
     }
 
     fn endgame_phase_weight(material_count_without_pawns: i32) -> f32 {

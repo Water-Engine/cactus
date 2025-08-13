@@ -753,32 +753,8 @@ pub fn get_pmd() -> &'static PrecomputedMoveData {
     PRECOMPUTED_MOVE_DATA.get_or_init(PrecomputedMoveData::new)
 }
 
-impl Default for PrecomputedMoveData {
-    fn default() -> Self {
-        Self {
-            align_mask: [[u64::default(); 64]; 64],
-            dir_ray_mask: [[u64::default(); 64]; 8],
-            num_squares_to_edge: [[i32::default(); 8]; 64],
-            knight_moves: std::array::from_fn(|_| Vec::new()),
-            king_moves: std::array::from_fn(|_| Vec::new()),
-            pawn_attacks_white: std::array::from_fn(|_| Vec::new()),
-            pawn_attacks_black: std::array::from_fn(|_| Vec::new()),
-            direction_lookup: [i32::default(); 127],
-            king_attack_bitboards: [u64::default(); 64],
-            knight_attack_bitboards: [u64::default(); 64],
-            pawn_attack_bitboards: [[u64::default(); 64]; 2],
-            rook_moves: [u64::default(); 64],
-            bishop_moves: [u64::default(); 64],
-            queen_moves: [u64::default(); 64],
-            orthogonal_distance: [[i32::default(); 64]; 64],
-            king_distance: [[i32::default(); 64]; 64],
-            center_manhattan_distance: [i32::default(); 64],
-        }
-    }
-}
-
 impl PrecomputedMoveData {
-    pub fn new() -> Self {
+    fn new() -> Self {
         let mut data = Self::default();
 
         for square_idx in 0..64 {
@@ -959,6 +935,28 @@ impl PrecomputedMoveData {
             });
 
         data
+    }
+
+    fn default() -> Self {
+        Self {
+            align_mask: [[u64::default(); 64]; 64],
+            dir_ray_mask: [[u64::default(); 64]; 8],
+            num_squares_to_edge: [[i32::default(); 8]; 64],
+            knight_moves: std::array::from_fn(|_| Vec::new()),
+            king_moves: std::array::from_fn(|_| Vec::new()),
+            pawn_attacks_white: std::array::from_fn(|_| Vec::new()),
+            pawn_attacks_black: std::array::from_fn(|_| Vec::new()),
+            direction_lookup: [i32::default(); 127],
+            king_attack_bitboards: [u64::default(); 64],
+            knight_attack_bitboards: [u64::default(); 64],
+            pawn_attack_bitboards: [[u64::default(); 64]; 2],
+            rook_moves: [u64::default(); 64],
+            bishop_moves: [u64::default(); 64],
+            queen_moves: [u64::default(); 64],
+            orthogonal_distance: [[i32::default(); 64]; 64],
+            king_distance: [[i32::default(); 64]; 64],
+            center_manhattan_distance: [i32::default(); 64],
+        }
     }
 }
 
