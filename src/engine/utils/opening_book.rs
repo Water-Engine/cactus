@@ -1,19 +1,8 @@
 use std::{collections::HashMap, sync::OnceLock};
 
-use rand::{SeedableRng, rngs::StdRng};
+use rand::{rngs::StdRng, Rng, SeedableRng};
 
 use crate::engine::game::board::Board;
-
-static OPENING_BOOK: OnceLock<OpeningBook> = OnceLock::new();
-
-fn init_book() -> OpeningBook {
-    OpeningBook::new(BOOK)
-}
-
-/// Retrieve the book instance containing "assets/book.txt"
-pub fn get_book() -> &'static OpeningBook {
-    OPENING_BOOK.get_or_init(init_book)
-}
 
 const BOOK: &str = include_str!("../../../assets/book.txt");
 
@@ -58,8 +47,48 @@ impl OpeningBook {
         self.moves_by_position.contains_key(&Self::remove_move_counters_from_fen(position_fen))
     }
 
-    pub fn try_get_book_move(board: &Board, weight_pow: f32) -> Option<String> {
-        todo!()
+    /**
+    Try to get a book move from the current position
+    * Weight is clamped between 0 and 1 inclusive
+    * 0 means all moves are picked with equal probability, 1 means moves are weighted by num times played.
+    */
+    pub fn try_get_book_move(&mut self, board: &mut Board, weight_pow: f32) -> Option<String> {
+        let position_fen = board.current_fen(false);
+        let weight_pow = weight_pow.clamp(0.0, 1.0);
+
+        let weighted_play_count = |play_count: i32| {
+            (play_count as f32).powf(weight_pow) as i32
+        };
+
+        if let Some(moves) = self.moves_by_position.get(&position_fen) {
+            let mut total_play_count = 0;
+            moves.iter().for_each(|mv| total_play_count += weighted_play_count(mv.num_times_played));
+
+            let mut weights = Vec::with_capacity(moves.len());
+            let mut weight_sum = 0.0;
+            for i in 0..moves.len() {
+                let weight = weighted_play_count(moves[i].num_times_played) as f32 / total_play_count as f32;
+                weight_sum += weight;
+                weights[i] = weight;
+            }
+
+            let mut prob_cum = Vec::with_capacity(moves.len());
+            for i in 0..weights.len() {
+                let prob = weights[i] / weight_sum;
+                prob_cum[i] = prob_cum[0.max(i - 1)] + prob;
+            }
+
+            let random = self.rng.random::<f32>();
+            for i in 0..moves.len() {
+                if random <= prob_cum[i] {
+                    return Some(moves[i].move_string.clone());
+                }
+            }
+
+            None
+        } else {
+            None
+        }
     }
 
     fn remove_move_counters_from_fen(fen: String) -> String {
