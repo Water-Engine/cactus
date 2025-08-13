@@ -1,4 +1,12 @@
-use crate::engine::game::{board::Board, coord::Coord, piece};
+use crate::engine::{
+    game::{
+        board::{self, Board},
+        coord::Coord,
+        r#move, piece,
+    },
+    generate::move_generator::MoveGenerator,
+    utils::fen,
+};
 
 use super::piece::{BISHOP, KNIGHT, NONE, Piece, QUEEN, ROOK};
 
@@ -86,6 +94,11 @@ impl Move {
 
 // Helper IMPL
 impl Move {
+    /**
+    Converts a UCI move name into internal move representation
+    * Promotions can be written with or without equals sign
+    * Examples: "e7e8=q", "e7e8q"
+    */
     pub fn from_uci(board: &Board, move_name: String) -> Self {
         let start_coord = Coord::from_string(move_name[0..3].to_string());
         let start_square: i32 = start_coord.index();
@@ -120,6 +133,10 @@ impl Move {
         Self::from((start_square, target_square, flag))
     }
 
+    /**
+    Get algebraic name of move (with promotion specified)
+    * Examples: "e2e4", "e7e8q"
+    */
     pub fn to_uci(&self) -> String {
         let start_square_name = Coord::new(self.start_square()).to_string();
         let target_square_name = Coord::new(self.target_square()).to_string();
@@ -138,11 +155,233 @@ impl Move {
         move_name
     }
 
-    pub fn from_san(board: &Board, algebraic_move: String) -> Self {
-        todo!("Not implemented")
+    /**
+    Get move from the given name in Standard Algebraic Notation (SAN)
+    * The given board must contain the position from before the move was made
+    * Examples: "Nxf3", "Rad1", "O-O"
+    * I am a never nesters worst nightmare
+    */
+    pub fn from_san(board: &mut Board, algebraic_move: String) -> Self {
+        let algebraic_move = algebraic_move
+            .replace("+", "")
+            .replace("#", "")
+            .replace("x", "to")
+            .replace("-", "");
+        let (all_moves, _) = board.generate_moves(false);
+        let mut mv = Self::default();
+
+        for move_to_test in all_moves {
+            mv = move_to_test;
+
+            let move_from_idx = mv.start_square();
+            let move_to_idx = mv.target_square();
+            let move_piece = piece::Piece::from(board.squares[move_from_idx as usize]);
+            let move_piece_type = move_piece.get_type();
+
+            let from_coord = Coord::new(move_from_idx);
+            let to_coord = Coord::new(move_to_idx);
+
+            let algebraic_move_chars: Vec<char> = algebraic_move.chars().collect();
+
+            if algebraic_move == "OO" {
+                // Kingside castle
+                if move_piece_type == piece::KING && move_to_idx - move_from_idx == 2 {
+                    return mv;
+                }
+            } else if algebraic_move == "OOO" {
+                // Queenside castle
+                if move_piece_type == piece::KING && move_to_idx - move_from_idx == -2 {
+                    return mv;
+                }
+            } else if board::FILE_NAMES.contains(&algebraic_move_chars[0]) {
+                // Is pawn move if starts with any file indicator
+                if move_piece_type != piece::PAWN {
+                    continue;
+                }
+
+                if let Some(idx) = board::FILE_NAMES
+                    .iter()
+                    .position(|c| c == &algebraic_move_chars[0])
+                {
+                    // Are we in the right spot?
+                    if idx as i32 != from_coord.file_idx {
+                        continue;
+                    }
+
+                    if algebraic_move.contains('=') {
+                        if to_coord.rank_idx == 0 || to_coord.rank_idx == 7 {
+                            if algebraic_move.len() == 5 {
+                                let target_file = algebraic_move_chars[1];
+                                if let Some(idx) =
+                                    board::FILE_NAMES.iter().position(|c| c == &target_file)
+                                {
+                                    if idx as i32 != to_coord.file_idx {
+                                        continue;
+                                    }
+                                }
+                            }
+                            let promotion_char =
+                                algebraic_move_chars[algebraic_move_chars.len() - 1];
+
+                            if mv.promotion_type() != piece::Piece::from(promotion_char) {
+                                continue;
+                            }
+
+                            return mv;
+                        }
+                    } else {
+                        let target_file = algebraic_move_chars[algebraic_move_chars.len() - 2];
+                        let target_rank = algebraic_move_chars[algebraic_move_chars.len() - 1];
+
+                        if let Some(idx) = board::FILE_NAMES.iter().position(|c| c == &target_file)
+                        {
+                            if idx as i32 == to_coord.file_idx
+                                && target_rank.to_string() == (to_coord.rank_idx + 1).to_string()
+                            {
+                                break;
+                            }
+                        }
+                    }
+                }
+            } else {
+                // Regular piece move
+                let move_piece_char = algebraic_move_chars[0];
+                if piece::Piece::from(move_piece_char).value != move_piece_type {
+                    continue;
+                }
+
+                let target_file = algebraic_move_chars[algebraic_move_chars.len() - 2];
+                let target_rank = algebraic_move_chars[algebraic_move_chars.len() - 1];
+                if let Some(idx) = board::FILE_NAMES.iter().position(|c| c == &target_file) {
+                    if idx as i32 != to_coord.file_idx {
+                        continue;
+                    }
+
+                    if target_rank.to_string() == (to_coord.rank_idx + 1).to_string() {
+                        if algebraic_move_chars.len() == 4 {
+                            let disambiguation_char = algebraic_move_chars[1];
+                            if board::FILE_NAMES.contains(&disambiguation_char) {
+                                if let Some(idx) = board::FILE_NAMES
+                                    .iter()
+                                    .position(|c| c == &disambiguation_char)
+                                {
+                                    if idx as i32 != from_coord.file_idx {
+                                        continue;
+                                    }
+                                }
+                            } else if disambiguation_char.to_string()
+                                != (from_coord.rank_idx + 1).to_string()
+                            {
+                                continue;
+                            }
+                        }
+                        break;
+                    }
+                }
+            }
+        }
+
+        mv
     }
 
-    pub fn to_san(&self) -> String {
-        todo!("Not implemented")
+    /**
+    Get name of move in Standard Algebraic Notation (SAN)
+    * The move must not yet have been made on the board
+    * Examples: "Nxf3", "Rad1", "O-O"
+    */
+    pub fn to_san(&self, board: &mut Board) -> String {
+        if self.is_null() {
+            return "Null".to_string();
+        }
+        let move_piece = piece::Piece::from(board.squares[self.start_square() as usize]);
+        let move_piece_type = move_piece.get_type();
+        let captured_piece = piece::Piece::from(board.squares[self.target_square() as usize]);
+        let captured_piece_type = captured_piece.get_type();
+
+        if self.move_flag() == r#move::CASTLE_FLAG {
+            let delta = self.target_square() - self.start_square();
+            if delta == 2 {
+                return "O-O".to_string();
+            } else if delta == -2 {
+                return "O-O-O".to_string();
+            }
+        }
+        let mut move_notation = move_piece.get_symbol().to_uppercase().to_string();
+
+        if move_piece_type != piece::PAWN && move_piece_type != piece::KING {
+            let (all_moves, _) = board.generate_moves(false);
+
+            for alt_move in all_moves {
+                if alt_move.start_square() != self.start_square()
+                    && alt_move.target_square() == self.target_square()
+                {
+                    let alt_move_piece =
+                        piece::Piece::from(board.squares[alt_move.start_square() as usize]);
+                    if alt_move_piece.get_type() == move_piece_type {
+                        let from_file_idx = Coord::file_of_square(self.start_square());
+                        let alternate_from_file_idx =
+                            Coord::file_of_square(alt_move.target_square());
+                        let from_rank_idx = Coord::rank_of_square(self.start_square());
+                        let alternate_from_rank_idx =
+                            Coord::rank_of_square(alt_move.target_square());
+
+                        if from_file_idx != alternate_from_file_idx {
+                            move_notation.push(board::FILE_NAMES[from_file_idx as usize]);
+                            break;
+                        } else if from_rank_idx != alternate_from_rank_idx {
+                            move_notation.push(board::RANK_NAMES[from_rank_idx as usize]);
+                            break;
+                        }
+                    }
+                }
+            }
+        }
+
+        if captured_piece_type != 0 {
+            if move_piece_type == piece::PAWN {
+                move_notation
+                    .push(board::FILE_NAMES[Coord::file_of_square(self.start_square()) as usize]);
+            }
+            move_notation.push('x');
+        } else {
+            if self.move_flag() == r#move::EN_PASSANT_CAPTURE_FLAG {
+                move_notation
+                    .push(board::FILE_NAMES[Coord::file_of_square(self.start_square()) as usize]);
+                move_notation.push('x');
+            }
+        }
+
+        move_notation.push(board::FILE_NAMES[Coord::file_of_square(self.target_square()) as usize]);
+        move_notation.push(board::RANK_NAMES[Coord::rank_of_square(self.target_square()) as usize]);
+
+        if self.is_promotion() {
+            let promotion_piece_type = self.promotion_type();
+            move_notation.push('=');
+            move_notation.push_str(&promotion_piece_type.get_symbol().to_uppercase().to_string());
+        }
+
+        board.make_move(*self, true);
+        let (legal_responses, mg) = board.generate_moves(false);
+        if mg.in_check {
+            if legal_responses.len() == 0 {
+                move_notation.push('#');
+            } else {
+                move_notation.push('+');
+            }
+        }
+
+        board.unmake_move(*self, true);
+
+        move_notation
     }
+}
+
+pub fn pgn_from_moves(moves: &Vec<Move>) -> String {
+    board::create_pgn(
+        moves,
+        super::arbiter::GameResult::InProgress,
+        fen::STARTING_FEN,
+        "",
+        "",
+    )
 }

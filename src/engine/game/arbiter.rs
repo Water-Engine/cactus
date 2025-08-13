@@ -4,7 +4,7 @@ use crate::engine::game::{
 };
 
 #[derive(Debug, Clone, Copy)]
-pub enum Result {
+pub enum GameResult {
     NotStarted,
     InProgress,
     WhiteIsMated,
@@ -20,37 +20,70 @@ pub enum Result {
     BlackIllegalMove,
 }
 
-pub fn is_draw(result: Result) -> bool {
+pub fn is_draw(result: GameResult) -> bool {
     match result {
-        Result::DrawByArbiter
-        | Result::FiftyMoveRule
-        | Result::Repetition
-        | Result::Stalemate
-        | Result::InsufficientMaterial => true,
+        GameResult::DrawByArbiter
+        | GameResult::FiftyMoveRule
+        | GameResult::Repetition
+        | GameResult::Stalemate
+        | GameResult::InsufficientMaterial => true,
         _ => false,
     }
 }
 
-pub fn is_win(result: Result) -> bool {
+pub fn is_win(result: GameResult) -> bool {
     white_winner(result) || black_winner(result)
 }
 
-pub fn white_winner(result: Result) -> bool {
+pub fn white_winner(result: GameResult) -> bool {
     match result {
-        Result::BlackIsMated | Result::BlackTimeout | Result::BlackIllegalMove => true,
+        GameResult::BlackIsMated | GameResult::BlackTimeout | GameResult::BlackIllegalMove => true,
         _ => false,
     }
 }
 
-pub fn black_winner(result: Result) -> bool {
+pub fn black_winner(result: GameResult) -> bool {
     match result {
-        Result::WhiteIsMated | Result::WhiteTimeout | Result::WhiteIllegalMove => true,
+        GameResult::WhiteIsMated | GameResult::WhiteTimeout | GameResult::WhiteIllegalMove => true,
         _ => false,
     }
 }
 
-pub fn get_game_state(board: &Board) -> Result {
-    todo!("Not implemented")
+pub fn get_game_state(board: &mut Board) -> GameResult {
+    let (moves, mg) = board.generate_moves(false);
+
+    // Checkmate/stalemate
+    if moves.len() == 0 {
+        if mg.in_check {
+            return board
+                .white_to_move
+                .then(|| GameResult::WhiteIsMated)
+                .unwrap_or(GameResult::BlackIsMated);
+        }
+        return GameResult::Stalemate;
+    }
+
+    // Halfmove clock - 50 move rule
+    if board.state.halfmove_clock >= 100 {
+        return GameResult::FiftyMoveRule;
+    }
+
+    // Threefold repetition
+    let repetition_count = board
+        .repetition_history
+        .iter()
+        .filter(|&&key| key == board.state.zobrist.key)
+        .count();
+    if repetition_count >= 3 {
+        return GameResult::Repetition;
+    }
+
+    // Insufficient Material
+    if insufficient_material(board) {
+        return GameResult::InsufficientMaterial;
+    }
+
+    GameResult::InProgress
 }
 
 pub fn insufficient_material(board: &Board) -> bool {

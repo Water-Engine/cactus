@@ -66,30 +66,31 @@ pub struct MoveGenerator {
 }
 
 impl Board {
-    pub fn generate_moves(&mut self, captures_only: bool) -> Vec<Move> {
+    pub fn generate_moves(&mut self, captures_only: bool) -> (Vec<Move>, MoveGenerator) {
         let mut moves = Vec::with_capacity(MAX_MOVES);
-        self.append_moves(&mut moves, captures_only);
-        moves.to_vec()
+        let mg = self.append_moves(&mut moves, captures_only);
+        (moves.to_vec(), mg)
     }
 
-    pub fn append_moves(&mut self, moves: &mut Vec<Move>, captures_only: bool) {
-        MoveGenerator::generate(self, moves, captures_only);
+    pub fn append_moves(&mut self, moves: &mut Vec<Move>, captures_only: bool) -> MoveGenerator {
+        MoveGenerator::generate(self, moves, captures_only)
     }
 }
 
 impl MoveGenerator {
-    fn generate(board: &mut Board, moves: &mut Vec<Move>, captures_only: bool) {
+    fn generate(board: &mut Board, moves: &mut Vec<Move>, captures_only: bool) -> Self {
         let mut move_gen = Self::new(board, captures_only);
 
-        move_gen.generate_king_moves(board, moves);    
+        move_gen.generate_king_moves(board, moves);
 
         if !move_gen.in_double_check {
             move_gen.generate_sliding_moves(board, moves);
             move_gen.generate_knight_moves(board, moves);
             move_gen.generate_pawn_moves(board, moves);
-        }    
+        }
 
         moves.truncate(move_gen.current_move_index);
+        move_gen
     }
 
     fn new(board: &mut Board, captures_only: bool) -> Self {
@@ -110,7 +111,10 @@ impl MoveGenerator {
         mg.all_pieces = board.all_piece_bb;
         mg.empty_squares = !mg.all_pieces;
         mg.empty_or_enemy_squares = mg.empty_squares | mg.enemy_pieces;
-        mg.move_type_mask = mg.generate_quiet_moves.then(|| u64::MAX).unwrap_or(mg.enemy_pieces);
+        mg.move_type_mask = mg
+            .generate_quiet_moves
+            .then(|| u64::MAX)
+            .unwrap_or(mg.enemy_pieces);
 
         mg.calculate_attack_map(board);
         mg

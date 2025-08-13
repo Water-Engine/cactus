@@ -4,6 +4,7 @@ use crate::engine::{
         board::{Board, Color},
         piece::{self, PieceList},
     },
+    generate::move_generator,
 };
 
 pub const PAWN_VALUE: i32 = 100;
@@ -112,7 +113,17 @@ impl Evaluation {
             let friendly_king_square = board.king_squares[friendly_idx];
             let opponent_king_square = board.king_squares[opponent_idx];
 
-            todo!("Not implemented")
+            // Encourage moving king closer to opponent king
+            mop_up_score += (14
+                - move_generator::get_pmd().orthogonal_distance[friendly_king_square as usize]
+                    [opponent_king_square as usize])
+                * 4;
+
+            // Encourage pushing opponent king to edge of board
+            mop_up_score += move_generator::get_pmd().center_manhattan_distance
+                [opponent_king_square as usize]
+                * 10;
+            (mop_up_score as f32 * enemy_material.endgame_t) as i32
         } else {
             0
         }

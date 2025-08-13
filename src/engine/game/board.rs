@@ -2,13 +2,17 @@ use std::collections::VecDeque;
 
 use crate::engine::{
     game::{
+        arbiter::GameResult,
         board,
         coord::Coord,
         r#move::{self, Move},
         piece::{self, PieceList},
         state::{self, State, Zobrist},
     },
-    generate::bitboard::BitBoard,
+    generate::{
+        bitboard::{self, BitBoard},
+        magic,
+    },
     utils::fen::{self, PositionInfo},
 };
 
@@ -480,7 +484,45 @@ impl Board {
     }
 
     pub fn calculate_in_check_state(&self) -> bool {
-        todo!("Not implemented")
+        let king_square = self.king_squares[self.move_color() as usize];
+        let blockers = self.all_piece_bb;
+
+        if self.enemy_ortho_slider_bb != 0 {
+            let rook_attacks = magic::get_magic().get_rook_attacks(king_square, blockers);
+            if (rook_attacks & self.enemy_ortho_slider_bb) != 0 {
+                return true;
+            }
+        }
+        if self.enemy_diag_slider_bb != 0 {
+            let bishop_attacks = magic::get_magic().get_bishop_attacks(king_square, blockers);
+            if (bishop_attacks & self.enemy_diag_slider_bb) != 0 {
+                return true;
+            }
+        }
+
+        let enemy_knights = self.piece_bbs[piece::Piece::from((
+            piece::KNIGHT,
+            self.opponent_color().to_piece_color(),
+        ))
+        .value as usize];
+        if (bitboard::get_bb_utility().knight_attacks[king_square as usize] & enemy_knights) != 0 {
+            return true;
+        }
+
+        let enemy_pawns = self.piece_bbs[piece::Piece::from((
+            piece::PAWN,
+            self.opponent_color().to_piece_color(),
+        ))
+        .value as usize];
+        let pawn_attack_mask = self
+            .white_to_move
+            .then(|| bitboard::get_bb_utility().white_pawn_attacks[king_square as usize])
+            .unwrap_or(bitboard::get_bb_utility().black_pawn_attacks[king_square as usize]);
+        if (pawn_attack_mask & enemy_pawns) != 0 {
+            return true;
+        }
+
+        return false;
     }
 
     /**
@@ -703,4 +745,59 @@ impl Board {
         }
         diagram
     }
+
+    pub fn pgn(&mut self, result: GameResult, white_name: &str, black_name: &str) -> String {
+        create_pgn(
+            &self.all_moves,
+            result,
+            &self.start_pos_info.fen,
+            white_name,
+            black_name,
+        )
+    }
+}
+
+pub fn create_pgn(
+    moves: &Vec<Move>,
+    result: GameResult,
+    start_fen: &str,
+    white_name: &str,
+    black_name: &str,
+) -> String {
+    let start_fen = start_fen.replace("\n", "").replace("\r", "");
+
+    let mut pgn = String::new();
+    let mut board = Board::new();
+    if let Err(e) = board.load_from_fen(&start_fen) {
+        return e;
+    }
+
+    if !white_name.is_empty() {
+        pgn.push_str(&format!("[White \"{white_name}\"]\n"));
+    }
+    if !black_name.is_empty() {
+        pgn.push_str(&format!("[Black \"{black_name}\"]\n"));
+    }
+
+    if &start_fen == fen::STARTING_FEN {
+        pgn.push_str(&format!("[FEN \"{start_fen}\"]\n"));
+    }
+    match result {
+        GameResult::NotStarted | GameResult::InProgress => {
+            pgn.push_str(&format!("[Result \"{result:?}\"]\n"))
+        }
+        _ => {}
+    }
+
+    for ply_count in 0..moves.len() {
+        let move_string = moves[ply_count].to_san(&mut board);
+        board.make_move(moves[ply_count], false);
+
+        if ply_count % 2 == 0 {
+            pgn.push_str(&format!("{}. ", ply_count / 2 + 1));
+        }
+        pgn.push_str(&format!("{move_string} "));
+    }
+
+    pgn
 }
