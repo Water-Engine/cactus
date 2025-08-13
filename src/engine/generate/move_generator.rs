@@ -749,12 +749,8 @@ pub struct PrecomputedMoveData {
 
 static PRECOMPUTED_MOVE_DATA: OnceLock<PrecomputedMoveData> = OnceLock::new();
 
-fn init_pmd() -> PrecomputedMoveData {
-    PrecomputedMoveData::new()
-}
-
 pub fn get_pmd() -> &'static PrecomputedMoveData {
-    PRECOMPUTED_MOVE_DATA.get_or_init(init_pmd)
+    PRECOMPUTED_MOVE_DATA.get_or_init(PrecomputedMoveData::new)
 }
 
 impl Default for PrecomputedMoveData {

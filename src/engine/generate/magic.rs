@@ -8,12 +8,8 @@ use std::sync::OnceLock;
 
 static MAGIC: OnceLock<Magic> = OnceLock::new();
 
-fn init_magic() -> Magic {
-    Magic::new()
-}
-
 pub fn get_magic() -> &'static Magic {
-    MAGIC.get_or_init(init_magic)
+    MAGIC.get_or_init(Magic::new)
 }
 
 pub struct Magic {

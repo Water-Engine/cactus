@@ -1,6 +1,6 @@
 use std::{collections::HashMap, sync::OnceLock};
 
-use rand::{rngs::StdRng, Rng, SeedableRng};
+use rand::{Rng, SeedableRng, rngs::StdRng};
 
 use crate::engine::game::board::Board;
 
@@ -23,9 +23,12 @@ impl Default for OpeningBook {
 impl OpeningBook {
     pub fn new(file_contents: &str) -> Self {
         let mut book = OpeningBook::default();
-        let entries: Vec<&str> = file_contents.trim_matches(&[',', '\n']).split("pos").collect();
+        let entries: Vec<&str> = file_contents
+            .trim_matches(&[',', '\n'])
+            .split("pos")
+            .collect();
         book.moves_by_position.reserve(entries.len());
-        
+
         for entry in entries {
             let entry_data: Vec<&str> = entry.trim_matches('\n').split('\n').collect();
             let position_fen = entry_data[0].trim();
@@ -35,16 +38,19 @@ impl OpeningBook {
 
             for move_idx in 0..all_move_data.len() {
                 let move_data: Vec<&str> = all_move_data[move_idx].split_whitespace().collect();
-                book_moves[move_idx] = BookMove::new(move_data[0].to_string(), move_data[1].parse().unwrap_or(0));
+                book_moves[move_idx] =
+                    BookMove::new(move_data[0].to_string(), move_data[1].parse().unwrap_or(0));
             }
 
-            book.moves_by_position.insert(position_fen.to_string(), book_moves);
+            book.moves_by_position
+                .insert(position_fen.to_string(), book_moves);
         }
         book
     }
 
     pub fn has_book_move(&self, position_fen: String) -> bool {
-        self.moves_by_position.contains_key(&Self::remove_move_counters_from_fen(position_fen))
+        self.moves_by_position
+            .contains_key(&Self::remove_move_counters_from_fen(position_fen))
     }
 
     /**
@@ -56,18 +62,19 @@ impl OpeningBook {
         let position_fen = board.current_fen(false);
         let weight_pow = weight_pow.clamp(0.0, 1.0);
 
-        let weighted_play_count = |play_count: i32| {
-            (play_count as f32).powf(weight_pow) as i32
-        };
+        let weighted_play_count = |play_count: i32| (play_count as f32).powf(weight_pow) as i32;
 
         if let Some(moves) = self.moves_by_position.get(&position_fen) {
             let mut total_play_count = 0;
-            moves.iter().for_each(|mv| total_play_count += weighted_play_count(mv.num_times_played));
+            moves
+                .iter()
+                .for_each(|mv| total_play_count += weighted_play_count(mv.num_times_played));
 
             let mut weights = Vec::with_capacity(moves.len());
             let mut weight_sum = 0.0;
             for i in 0..moves.len() {
-                let weight = weighted_play_count(moves[i].num_times_played) as f32 / total_play_count as f32;
+                let weight =
+                    weighted_play_count(moves[i].num_times_played) as f32 / total_play_count as f32;
                 weight_sum += weight;
                 weights[i] = weight;
             }

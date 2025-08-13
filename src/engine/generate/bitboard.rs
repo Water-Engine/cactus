@@ -110,12 +110,8 @@ impl BitMasks {
 
 static BITBOARD_UTILITY: OnceLock<BitBoard> = OnceLock::new();
 
-fn init_bb_utility() -> BitBoard {
-    BitBoard::default()
-}
-
 pub fn get_bb_utility() -> &'static BitBoard {
-    BITBOARD_UTILITY.get_or_init(init_bb_utility)
+    BITBOARD_UTILITY.get_or_init(BitBoard::new)
 }
 
 #[derive(Debug)]
