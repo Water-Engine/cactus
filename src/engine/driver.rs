@@ -11,7 +11,6 @@ use std::{env, io, thread};
 use directories::BaseDirs;
 
 pub struct CactusEngine {
-    thinking: bool,
     log: Option<File>,
 }
 
@@ -102,7 +101,6 @@ impl CactusEngine {
             },
             Some("go") => {}
             Some("stop") => {
-                self.stop_thinking();
             }
             Some("d") => {}
             Some("quit") => {}
@@ -115,10 +113,6 @@ impl CactusEngine {
             return;
         };
         let _ = log.write(msg.as_bytes());
-    }
-
-    pub fn stop_thinking(&mut self) {
-        self.thinking = false;
     }
 }
 
@@ -135,7 +129,6 @@ impl Default for CactusEngine {
         };
 
         Self {
-            thinking: false,
             log: File::create(log_path).ok(),
         }
     }

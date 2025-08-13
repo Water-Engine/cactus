@@ -4,7 +4,7 @@ use rand::{Rng, SeedableRng, rngs::StdRng};
 
 use crate::engine::game::board::Board;
 
-const BOOK: &str = include_str!("../../../assets/book.txt");
+pub const BOOK: &str = include_str!("../../../assets/book.txt");
 
 pub struct OpeningBook {
     moves_by_position: HashMap<String, Vec<BookMove>>,
