@@ -4,6 +4,18 @@ use crate::engine::{
     utils::precomputed_magics::{BISHOP_MAGICS, BISHOP_SHIFTS, ROOK_MAGICS, ROOK_SHIFTS},
 };
 
+use std::sync::OnceLock;
+
+static MAGIC: OnceLock<Magic> = OnceLock::new();
+
+fn init_magic() -> Magic {
+    Magic::new()
+}
+
+pub fn get_magic() -> &'static Magic {
+    MAGIC.get_or_init(init_magic)
+}
+
 pub struct Magic {
     pub rook_mask: [u64; 64],
     pub bishop_mask: [u64; 64],
@@ -67,9 +79,9 @@ impl Magic {
         let blocker_patterns = Self::create_all_blockers(movement_mask);
 
         blocker_patterns.iter().for_each(|pattern| {
-            let index = (pattern * magic) >> left_shift;
+            let idx = (pattern * magic) >> left_shift;
             let moves = Self::legal_move_bb(square, *pattern, rook);
-            table[index as usize] = moves;
+            table[idx as usize] = moves;
         });
 
         table

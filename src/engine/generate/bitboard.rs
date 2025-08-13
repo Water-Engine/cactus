@@ -1,5 +1,7 @@
 use crate::engine::game::{board, coord::Coord};
 
+use std::sync::OnceLock;
+
 pub const FILE_A: u64 = 0x101010101010101;
 
 pub const WHITE_KINGSIDE_MASK: u64 = 1 << board::F1 | 1 << board::G1;
@@ -106,6 +108,16 @@ impl BitMasks {
     }
 }
 
+static BITBOARD_UTILITY: OnceLock<BitBoard> = OnceLock::new();
+
+fn init_bb_utility() -> BitBoard {
+    BitBoard::default()
+}
+
+pub fn get_bb_utility() -> &'static BitBoard {
+    BITBOARD_UTILITY.get_or_init(init_bb_utility)
+}
+
 #[derive(Debug)]
 pub struct BitBoard {
     pub knight_attacks: [u64; 64],
@@ -197,10 +209,10 @@ impl BitBoard {
 
 // Helper IMPL
 impl BitBoard {
-    pub fn pop_lsb(b: &mut u64) -> u32 {
+    pub fn pop_lsb(b: &mut u64) -> i32 {
         let i = b.trailing_zeros();
         *b &= *b - 1;
-        i
+        i as i32
     }
 
     pub fn set_square(bb: &mut u64, square_idx: i32) {

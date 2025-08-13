@@ -98,23 +98,11 @@ impl Board {
         let ep_capture_square = Coord::from((ep_file_idx, ep_rank_idx)).index();
         let friendly_pawn = piece::Piece::from((piece::PAWN, self.move_color().to_piece_color()));
 
-        self.can_capture(
-            &capture_from_a,
-            ep_capture_square,
-            friendly_pawn.value,
-        ) || self.can_capture(
-            &capture_from_b,
-            ep_capture_square,
-            friendly_pawn.value,
-        )
+        self.can_capture(&capture_from_a, ep_capture_square, friendly_pawn.value)
+            || self.can_capture(&capture_from_b, ep_capture_square, friendly_pawn.value)
     }
 
-    fn can_capture(
-        &mut self,
-        from: &Coord,
-        ep_capture_square: i32,
-        friendly_pawn: i32,
-    ) -> bool {
+    fn can_capture(&mut self, from: &Coord, ep_capture_square: i32, friendly_pawn: i32) -> bool {
         let is_pawn_on_square = self.squares[from.index() as usize] == friendly_pawn;
         if from.is_valid_square() && is_pawn_on_square {
             let mv = Move::from((

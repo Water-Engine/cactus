@@ -47,10 +47,16 @@ pub const F8: i32 = 61;
 pub const G8: i32 = 62;
 pub const H8: i32 = 63;
 
-#[derive(Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Color {
     White = 0,
     Black = 1,
+}
+
+impl Default for Color {
+    fn default() -> Self {
+        Color::White
+    }
 }
 
 impl Color {

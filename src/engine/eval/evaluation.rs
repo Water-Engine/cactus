@@ -34,7 +34,7 @@ struct Evaluation {
 }
 
 impl Board {
-        pub fn evaluate(&self) -> i32 {
+    pub fn evaluate(&self) -> i32 {
         let mut eval = Evaluation {
             white_eval: EvaluationData::default(),
             black_eval: EvaluationData::default(),
@@ -52,8 +52,10 @@ impl Board {
             eval.evaluate_piece_square_tables(&self, false, white_material.endgame_t);
 
         // moving king to push enemy king at end of winning game is good
-        eval.white_eval.mop_up_score = eval.mop_up_eval(&self, true, &white_material, &black_material);
-        eval.black_eval.mop_up_score = eval.mop_up_eval(&self, false, &black_material, &white_material);
+        eval.white_eval.mop_up_score =
+            eval.mop_up_eval(&self, true, &white_material, &black_material);
+        eval.black_eval.mop_up_score =
+            eval.mop_up_eval(&self, false, &black_material, &white_material);
 
         eval.white_eval.pawn_score = eval.evaluate_pawns(Color::White);
         eval.black_eval.pawn_score = eval.evaluate_pawns(Color::Black);
@@ -210,8 +212,7 @@ impl Evaluation {
             .then(|| piece::BLACK)
             .unwrap_or(piece::WHITE);
 
-        let my_pawns =
-            board.piece_bbs[piece::Piece::from((piece::PAWN, my_color)).value as usize];
+        let my_pawns = board.piece_bbs[piece::Piece::from((piece::PAWN, my_color)).value as usize];
         let enemy_pawns =
             board.piece_bbs[piece::Piece::from((piece::PAWN, enemy_color)).value as usize];
 
