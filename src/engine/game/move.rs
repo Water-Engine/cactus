@@ -70,7 +70,7 @@ impl Move {
     }
 
     pub fn target_square(&self) -> i32 {
-        (self.value & TARGET_SQUARE_MASK) as i32
+        ((self.value & TARGET_SQUARE_MASK) >> 6) as i32
     }
 
     pub fn move_flag(&self) -> i32 {

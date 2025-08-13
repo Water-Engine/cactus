@@ -87,21 +87,20 @@ impl Magic {
 // Helper IMPL
 impl Magic {
     pub fn create_all_blockers(movement_mask: u64) -> Vec<u64> {
-        let mut move_square_indicies = Vec::new();
+        let mut move_square_indices = Vec::new();
         for i in 0..64 {
             if ((movement_mask >> i) & 1) == 1 {
-                move_square_indicies.push(i);
+                move_square_indices.push(i);
             }
         }
-
-        let num_patterns = 1 << move_square_indicies.len();
-        let mut blocker_bbs = Vec::with_capacity(num_patterns);
-        let _ = blocker_bbs.iter_mut().map(|s| *s = u64::default());
+        
+        let num_patterns = 1 << move_square_indices.len();
+        let mut blocker_bbs = vec![u64::default(); num_patterns];
 
         for pattern_idx in 0..num_patterns {
-            for bit_idx in 0..move_square_indicies.len() {
+            for bit_idx in 0..move_square_indices.len() {
                 let bit = (pattern_idx >> bit_idx) & 1;
-                blocker_bbs[pattern_idx] |= (bit << move_square_indicies[bit_idx as usize]) as u64;
+                blocker_bbs[pattern_idx] |= (bit << move_square_indices[bit_idx as usize]) as u64;
             }
         }
 

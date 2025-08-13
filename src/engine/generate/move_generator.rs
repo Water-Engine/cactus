@@ -120,7 +120,7 @@ impl MoveGenerator {
         mg
     }
 
-    fn generate_king_moves(&mut self, board: &Board, moves: &mut [Move]) {
+    fn generate_king_moves(&mut self, board: &Board, moves: &mut Vec<Move>) {
         let legal_mask = !(self.opponent_attack_map | self.friendly_pieces);
         let mut king_moves = bitboard::get_bb_utility().king_moves
             [self.friendly_king_square as usize]
@@ -135,7 +135,7 @@ impl MoveGenerator {
             if self.current_move_index > MAX_MOVES {
                 return;
             }
-            moves[self.current_move_index] = Move::from((self.friendly_king_square, target_square));
+            moves.push(Move::from((self.friendly_king_square, target_square)));
 
             self.current_move_index += 1;
         }
@@ -154,11 +154,11 @@ impl MoveGenerator {
                         return;
                     }
 
-                    moves[self.current_move_index] = Move::from((
+                    moves.push(Move::from((
                         self.friendly_king_square,
                         target_square,
                         r#move::CASTLE_FLAG,
-                    ));
+                    )));
                     self.current_move_index += 1;
                 }
             }
@@ -181,20 +181,20 @@ impl MoveGenerator {
                         return;
                     }
 
-                    moves[self.current_move_index] = Move::from(
+                    moves.push(Move::from(
                         ((
                             self.friendly_king_square,
                             target_square,
                             r#move::CASTLE_FLAG,
                         )),
-                    );
+                    ));
                     self.current_move_index += 1;
                 }
             }
         }
     }
 
-    fn generate_sliding_moves(&mut self, board: &Board, moves: &mut [Move]) {
+    fn generate_sliding_moves(&mut self, board: &Board, moves: &mut Vec<Move>) {
         let move_mask = self.empty_or_enemy_squares & self.check_ray_bitboard & self.move_type_mask;
 
         let mut orthogonal_sliders = board.friendly_ortho_slider_bb;
@@ -221,7 +221,7 @@ impl MoveGenerator {
                     return;
                 }
 
-                moves[self.current_move_index] = Move::from((start_square, target_square));
+                moves.push(Move::from((start_square, target_square)));
                 self.current_move_index += 1;
             }
         }
@@ -242,13 +242,13 @@ impl MoveGenerator {
                     return;
                 }
 
-                moves[self.current_move_index] = Move::from((start_square, target_square));
+                moves.push(Move::from((start_square, target_square)));
                 self.current_move_index += 1;
             }
         }
     }
 
-    fn generate_knight_moves(&mut self, board: &Board, moves: &mut [Move]) {
+    fn generate_knight_moves(&mut self, board: &Board, moves: &mut Vec<Move>) {
         let friendly_knight_piece =
             piece::Piece::from((piece::KNIGHT, board.move_color().to_piece_color()));
         let mut knights = board.piece_bbs[friendly_knight_piece.value as usize] & self.not_pin_rays;
@@ -265,13 +265,13 @@ impl MoveGenerator {
                     return;
                 }
 
-                moves[self.current_move_index] = Move::from((knight_square, target_square));
+                moves.push(Move::from((knight_square, target_square)));
                 self.current_move_index += 1;
             }
         }
     }
 
-    fn generate_pawn_moves(&mut self, board: &Board, moves: &mut [Move]) {
+    fn generate_pawn_moves(&mut self, board: &Board, moves: &mut Vec<Move>) {
         let push_dir = board.white_to_move.then(|| 1).unwrap_or(-1);
         let push_offset = push_dir * 8;
 
@@ -324,7 +324,7 @@ impl MoveGenerator {
                         return;
                     }
 
-                    moves[self.current_move_index] = Move::from((start_square, target_square));
+                    moves.push(Move::from((start_square, target_square)));
                     self.current_move_index += 1;
                 }
             }
@@ -352,8 +352,7 @@ impl MoveGenerator {
                         return;
                     }
 
-                    moves[self.current_move_index] =
-                        Move::from((start_square, target_square, r#move::PAWN_TWO_UP_FLAG));
+                    moves.push(Move::from((start_square, target_square, r#move::PAWN_TWO_UP_FLAG)));
                     self.current_move_index += 1;
                 }
             }
@@ -373,7 +372,7 @@ impl MoveGenerator {
                     return;
                 }
 
-                moves[self.current_move_index] = Move::from((start_square, target_square));
+                moves.push(Move::from((start_square, target_square)));
                 self.current_move_index += 1;
             }
         }
@@ -391,7 +390,7 @@ impl MoveGenerator {
                     return;
                 }
 
-                moves[self.current_move_index] = Move::from((start_square, target_square));
+                moves.push(Move::from((start_square, target_square)));
                 self.current_move_index += 1;
             }
         }
@@ -460,9 +459,9 @@ impl MoveGenerator {
                                 return;
                             }
 
-                            moves[self.current_move_index] = Move::from(
+                            moves.push(Move::from(
                                 ((start_square, target_square, r#move::EN_PASSANT_CAPTURE_FLAG)),
-                            );
+                            ));
                             self.current_move_index += 1;
                         }
                     }
@@ -471,7 +470,7 @@ impl MoveGenerator {
         }
     }
 
-    fn generate_promotions(&mut self, start_square: i32, target_square: i32, moves: &mut [Move]) {
+    fn generate_promotions(&mut self, start_square: i32, target_square: i32, moves: &mut Vec<Move>) {
         if self.current_move_index > MAX_MOVES {
             return;
         }
