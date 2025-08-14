@@ -352,7 +352,11 @@ impl MoveGenerator {
                         return;
                     }
 
-                    moves.push(Move::from((start_square, target_square, r#move::PAWN_TWO_UP_FLAG)));
+                    moves.push(Move::from((
+                        start_square,
+                        target_square,
+                        r#move::PAWN_TWO_UP_FLAG,
+                    )));
                     self.current_move_index += 1;
                 }
             }
@@ -470,7 +474,12 @@ impl MoveGenerator {
         }
     }
 
-    fn generate_promotions(&mut self, start_square: i32, target_square: i32, moves: &mut Vec<Move>) {
+    fn generate_promotions(
+        &mut self,
+        start_square: i32,
+        target_square: i32,
+        moves: &mut Vec<Move>,
+    ) {
         if self.current_move_index > MAX_MOVES {
             return;
         }

@@ -93,7 +93,7 @@ impl Magic {
                 move_square_indices.push(i);
             }
         }
-        
+
         let num_patterns = 1 << move_square_indices.len();
         let mut blocker_bbs = vec![u64::default(); num_patterns];
 

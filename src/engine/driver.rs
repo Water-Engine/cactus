@@ -1,6 +1,6 @@
 use crate::coupling::EngineHandle;
 use crate::engine::brain::Brain;
-use crate::engine::utils;
+use crate::engine::utils::fen;
 
 use std::collections::VecDeque;
 use std::fs::{self, File};
@@ -11,6 +11,17 @@ use std::sync::{Arc, Mutex};
 use std::{env, io, thread};
 
 use directories::BaseDirs;
+
+const POSITION_LABELS: [&str; 3] = ["position", "fen", "moves"];
+const GO_LABELS: [&str; 7] = [
+    "go",
+    "movetime",
+    "wtime",
+    "btime",
+    "winc",
+    "binc",
+    "movestogo",
+];
 
 pub struct CactusEngine {
     player: Arc<Mutex<Brain>>,
@@ -86,7 +97,6 @@ impl CactusEngine {
         let cmd = cmd.trim().to_lowercase();
         let mut parts: VecDeque<&str> = cmd.split_whitespace().collect();
         let cmd_lead = parts.pop_front();
-        let cmd_args: Vec<String> = parts.iter().map(|s| s.to_string()).collect();
 
         match cmd_lead {
             Some("uci") => {
@@ -102,13 +112,14 @@ impl CactusEngine {
                     sender.send("Failed to start new game".to_string());
                 }
             }
-            Some("position") => match utils::parser::position(cmd_args) {
-                Ok(moves) => {
-                    dbg!(moves);
-                }
-                Err(msg) => self.log(msg),
-            },
-            Some("go") => {}
+            Some("position") => {
+                let result = self.process_position_cmd(&cmd);
+                self.log(result.unwrap_or_else(|e| e))
+            }
+            Some("go") => {
+                let result = self.process_go_command(&cmd);
+                self.log(result.unwrap_or_else(|e| e))
+            }
             Some("stop") => {
                 if let Ok(brain) = self.player.lock() {
                     let _ = brain.stop_thinking();
@@ -173,4 +184,108 @@ impl Default for CactusEngine {
 
         engine
     }
+}
+
+// Helper IMPL
+impl CactusEngine {
+    fn process_position_cmd(&mut self, message: &str) -> Result<String, String> {
+        let is_uci_str = message.contains(&"startpos".to_string());
+        let is_fen_str = message.contains(&"fen".to_string());
+        if is_uci_str && is_fen_str {
+            return Err(
+                "Invalid position command: expected either 'startpos' or 'fen', received both"
+                    .into(),
+            );
+        }
+
+        let player = self.player.lock().map_err(|_| "Player mutex poisoned")?;
+
+        if is_uci_str {
+            player.set_position(fen::STARTING_FEN)?;
+        } else if is_fen_str {
+            let custom_fen = try_get_labeled_value_string(message, "fen", &POSITION_LABELS, "");
+            player.set_position(&custom_fen)?;
+        } else {
+            return Err("Invalid position command: expected either 'startpos' or 'fen'".into());
+        }
+
+        let all_moves = try_get_labeled_value_string(message, "moves", &POSITION_LABELS, "");
+        if !all_moves.is_empty() {
+            let move_list: Vec<&str> = all_moves.split(' ').collect();
+            for &mv in &move_list {
+                player.make_move(mv)?;
+            }
+
+            return Ok(format!(
+                "Make moves after setting position: {}",
+                move_list.len()
+            ));
+        }
+
+        Ok("".to_string())
+    }
+
+    fn process_go_command(&mut self, message: &str) -> Result<String, String> {
+        let mut player = self.player.lock().map_err(|_| "Player mutex poisoned")?;
+
+        let think_time_ms;
+        if message.contains("movetime") {
+            think_time_ms = try_get_labeled_value_int(message, "movetime", &GO_LABELS, 0);
+        } else {
+            let time_remaining_white_ms =
+                try_get_labeled_value_int(message, "wtime", &GO_LABELS, 0);
+            let time_remaining_black_ms =
+                try_get_labeled_value_int(message, "btime", &GO_LABELS, 0);
+            let increment_white_ms = try_get_labeled_value_int(message, "winc", &GO_LABELS, 0);
+            let increment_black_ms = try_get_labeled_value_int(message, "binc", &GO_LABELS, 0);
+
+            think_time_ms = player.choose_think_time(
+                time_remaining_white_ms,
+                time_remaining_black_ms,
+                increment_white_ms,
+                increment_black_ms,
+            )?;
+        }
+        player.think_timed(think_time_ms)?;
+        Ok(format!("Thinking for: {} ms.", think_time_ms))
+    }
+}
+
+fn try_get_labeled_value_int(
+    text: &str,
+    label: &str,
+    all_labels: &[&str],
+    default_value: i32,
+) -> i32 {
+    let value_string =
+        try_get_labeled_value_string(text, label, all_labels, &default_value.to_string());
+    if let Ok(result) = (value_string.split(' ').collect::<Vec<&str>>())[0].parse::<i32>() {
+        return result;
+    }
+    return default_value;
+}
+
+fn try_get_labeled_value_string(
+    text: &str,
+    label: &str,
+    all_labels: &[&str],
+    default_value: &str,
+) -> String {
+    let text = text.trim();
+    if let Some(value_start) = text.find(label) {
+        let mut value_end = text.len();
+
+        all_labels.iter().for_each(|&other_id| {
+            if other_id != label {
+                if let Some(other_id_start_idx) = text.find(other_id) {
+                    if other_id_start_idx > value_start && other_id_start_idx < value_end {
+                        value_end = other_id_start_idx;
+                    }
+                }
+            }
+        });
+
+        return text[value_start..value_end].to_string();
+    }
+    return default_value.to_string();
 }

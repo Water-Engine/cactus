@@ -103,14 +103,20 @@ impl Evaluation {
         let mut uncastled_king_penalty = 0;
 
         if king_file <= 2 || king_file >= 5 {
-            let white_pawn_shields = &precomputed_evals::get_ped().pawn_shield_squares[Color::White as usize][king_square as usize];
-            let black_pawn_shields = &precomputed_evals::get_ped().pawn_shield_squares[Color::Black as usize][king_square as usize];
-            let squares = is_white.then(|| white_pawn_shields).unwrap_or(black_pawn_shields);
+            let white_pawn_shields = &precomputed_evals::get_ped().pawn_shield_squares
+                [Color::White as usize][king_square as usize];
+            let black_pawn_shields = &precomputed_evals::get_ped().pawn_shield_squares
+                [Color::Black as usize][king_square as usize];
+            let squares = is_white
+                .then(|| white_pawn_shields)
+                .unwrap_or(black_pawn_shields);
 
             for i in 0..(squares.len() / 2) {
                 let shield_square_idx = squares[i];
                 if board.squares[shield_square_idx as usize] != friendly_pawn.value {
-                    if squares.len() > 3 && board.squares[squares[i + 3] as usize] == friendly_pawn.value {
+                    if squares.len() > 3
+                        && board.squares[squares[i + 3] as usize] == friendly_pawn.value
+                    {
                         penalty += KING_PAWN_SHIELD_SCORES[i + 3];
                     } else {
                         penalty += KING_PAWN_SHIELD_SCORES[i];
@@ -119,13 +125,16 @@ impl Evaluation {
             }
             penalty *= penalty;
         } else {
-            let enemy_development_score = ((enemy_piece_square_score + 10.0) / 130.0).clamp(0.0, 1.0);
+            let enemy_development_score =
+                ((enemy_piece_square_score + 10.0) / 130.0).clamp(0.0, 1.0);
             uncastled_king_penalty = 50 * enemy_development_score as i32;
         }
 
         let mut open_file_against_king_penalty = 0;
 
-        if enemy_material.num_rooks > 1 || (enemy_material.num_rooks > 0 && enemy_material.num_queens > 0) {
+        if enemy_material.num_rooks > 1
+            || (enemy_material.num_rooks > 0 && enemy_material.num_queens > 0)
+        {
             let clamped_king_file = king_file.clamp(1, 6);
             let my_pawns = enemy_material.enemy_pawns;
 
@@ -147,7 +156,8 @@ impl Evaluation {
             pawn_shield_weight *= 0.6;
         }
 
-        (-penalty - uncastled_king_penalty - open_file_against_king_penalty) * pawn_shield_weight as i32
+        (-penalty - uncastled_king_penalty - open_file_against_king_penalty)
+            * pawn_shield_weight as i32
     }
 
     pub fn evaluate_pawns(&self, board: &Board, color: Color) -> i32 {

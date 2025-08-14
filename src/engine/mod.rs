@@ -1,5 +1,5 @@
-pub mod driver;
 pub mod brain;
+pub mod driver;
 
 pub mod eval;
 pub mod game;

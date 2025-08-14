@@ -171,7 +171,10 @@ impl Brain {
 
     fn start_search(&mut self, time_ms: i32) -> Result<(), String> {
         {
-            let mut id = self.current_search_id.lock().map_err(|_| "Current search id mutex poisoned")?;
+            let mut id = self
+                .current_search_id
+                .lock()
+                .map_err(|_| "Current search id mutex poisoned")?;
             *id += 1;
         }
 
@@ -188,7 +191,10 @@ impl Brain {
         let token = CancellationToken::new();
         self.cancel_search_timer = Some(token.clone());
 
-        let this_search_id = *self.current_search_id.lock().map_err(|_| "Current search id mutex poisoned")?;
+        let this_search_id = *self
+            .current_search_id
+            .lock()
+            .map_err(|_| "Current search id mutex poisoned")?;
         let searcher = Arc::clone(&self.searcher);
         let is_quitting = Arc::clone(&self.is_quitting);
 
@@ -196,8 +202,12 @@ impl Brain {
             use std::time::Duration;
             std::thread::sleep(Duration::from_millis(time_ms as u64));
 
-            if token.is_cancelled() { return; }
-            if *is_quitting.lock().unwrap() { return; }
+            if token.is_cancelled() {
+                return;
+            }
+            if *is_quitting.lock().unwrap() {
+                return;
+            }
 
             if let Ok(mut s) = searcher.lock() {
                 s.end_search();
