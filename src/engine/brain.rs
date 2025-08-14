@@ -148,7 +148,6 @@ impl Brain {
         let searcher = Arc::clone(&self.searcher);
 
         std::thread::spawn(move || {
-            use std::sync::atomic::Ordering;
             loop {
                 if *is_quitting.lock().unwrap() {
                     break;

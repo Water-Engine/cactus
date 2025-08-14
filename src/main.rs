@@ -65,4 +65,10 @@ fn main() {
     }
 
     gui::launch::launch(maybe_white_engine, maybe_black_engine);
+    // let mut board = crate::engine::game::board::Board::new();
+    // let _ = board.load_start_pos();
+    // let mv1 = crate::engine::game::r#move::Move::from_uci(&board, "e2e4");
+    // dbg!(mv1);
+    // board.make_move(mv1, false);
+    // println!("{}", board.to_string());
 }

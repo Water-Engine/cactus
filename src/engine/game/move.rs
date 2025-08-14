@@ -100,9 +100,9 @@ impl Move {
     * Examples: "e7e8=q", "e7e8q"
     */
     pub fn from_uci(board: &Board, move_name: &str) -> Self {
-        let start_coord = Coord::from_string(move_name[0..3].to_string());
+        let start_coord = Coord::from_string(move_name[0..2].to_string());
         let start_square: i32 = start_coord.index();
-        let target_coord = Coord::from_string(move_name[2..5].to_string());
+        let target_coord = Coord::from_string(move_name[2..4].to_string());
         let target_square: i32 = target_coord.index();
 
         let moved_piece_type = Piece::from(board.squares[start_square as usize]).get_type();

@@ -79,13 +79,13 @@ impl Coord {
         Self {
             file_idx: FILE_NAMES
                 .iter()
-                .find(|&&file| name.chars().position(|c| c == file).is_some())
-                .map(|c| c.to_string().parse::<i32>().unwrap_or(-1))
+                .position(|&file| name.contains(file))
+                .map(|i| i as i32)
                 .unwrap_or(-1),
             rank_idx: RANK_NAMES
                 .iter()
-                .find(|&&rank| name.chars().position(|c| c == rank).is_some())
-                .map(|c| c.to_string().parse::<i32>().unwrap_or(-1))
+                .position(|&rank| name.contains(rank))
+                .map(|i| i as i32)
                 .unwrap_or(-1),
         }
     }

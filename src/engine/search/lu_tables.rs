@@ -52,3 +52,13 @@ impl RepetitionTable {
         return false;
     }
 }
+
+pub const LOOKUP_FAILED: i32 = -1;
+pub const EXACT: i32 = 0;
+pub const LOWER_BOUND: i32 = 1;
+pub const UPPER_BOUND: i32 = 2;
+
+/// Reference: https://web.archive.org/web/20071031100051/http://www.brucemo.com/compchess/programming/hashing.htm
+pub struct TranspositionTable {
+
+}

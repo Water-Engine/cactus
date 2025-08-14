@@ -211,7 +211,8 @@ impl CactusEngine {
 
         let all_moves = try_get_labeled_value_string(message, "moves", &POSITION_LABELS, "");
         if !all_moves.is_empty() {
-            let move_list: Vec<&str> = all_moves.split(' ').collect();
+            let move_list: Vec<&str> = all_moves.split(' ').filter(|s| !s.is_empty()).collect();
+            dbg!(&move_list);
             for &mv in &move_list {
                 player.make_move(mv)?;
             }
@@ -273,6 +274,7 @@ fn try_get_labeled_value_string(
 ) -> String {
     let text = text.trim();
     if let Some(value_start) = text.find(label) {
+        let value_start = value_start + label.len();
         let mut value_end = text.len();
 
         all_labels.iter().for_each(|&other_id| {
