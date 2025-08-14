@@ -877,7 +877,7 @@ impl PrecomputedMoveData {
                 }
             }
 
-            data.direction_lookup[i as usize] * offset.signum();
+            data.direction_lookup[i as usize] = abs_dir * offset.signum();
         }
 
         // Distance lu - POTENTIAL OPTIMIZATION

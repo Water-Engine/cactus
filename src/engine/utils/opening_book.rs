@@ -1,4 +1,4 @@
-use std::{collections::HashMap, sync::OnceLock};
+use std::{collections::HashMap};
 
 use rand::{Rng, SeedableRng, rngs::StdRng};
 
@@ -38,8 +38,7 @@ impl OpeningBook {
 
             for move_idx in 0..all_move_data.len() {
                 let move_data: Vec<&str> = all_move_data[move_idx].split_whitespace().collect();
-                book_moves[move_idx] =
-                    BookMove::new(move_data[0].to_string(), move_data[1].parse().unwrap_or(0));
+                book_moves.push(BookMove::new(move_data[0].to_string(), move_data[1].parse().unwrap_or(0)));
             }
 
             book.moves_by_position

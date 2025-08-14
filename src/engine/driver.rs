@@ -1,4 +1,5 @@
 use crate::coupling::EngineHandle;
+use crate::engine::brain::Brain;
 use crate::engine::utils;
 
 use std::collections::VecDeque;
@@ -6,11 +7,13 @@ use std::fs::{self, File};
 use std::io::{BufRead, Write};
 use std::path::PathBuf;
 use std::sync::mpsc::{Receiver, Sender};
+use std::sync::{Arc, Mutex};
 use std::{env, io, thread};
 
 use directories::BaseDirs;
 
 pub struct CactusEngine {
+    player: Arc<Mutex<Brain>>,
     log: Option<File>,
 }
 
@@ -92,7 +95,13 @@ impl CactusEngine {
                 sender.send("uciok".to_string());
             }
             Some("isready") => sender.send("readyok".to_string()),
-            Some("ucinewgame") => {}
+            Some("ucinewgame") => {
+                if let Ok(brain) = self.player.lock() {
+                    let _ = brain.notify_new_game();
+                } else {
+                    sender.send("Failed to start new game".to_string());
+                }
+            }
             Some("position") => match utils::parser::position(cmd_args) {
                 Ok(moves) => {
                     dbg!(moves);
@@ -101,9 +110,26 @@ impl CactusEngine {
             },
             Some("go") => {}
             Some("stop") => {
+                if let Ok(brain) = self.player.lock() {
+                    let _ = brain.stop_thinking();
+                } else {
+                    sender.send("Failed to stop player, consider aborting process".to_string());
+                }
             }
-            Some("d") => {}
-            Some("quit") => {}
+            Some("d") => {
+                if let Ok(brain) = self.player.lock() {
+                    sender.send(brain.display_board().unwrap_or_else(|e| e));
+                } else {
+                    sender.send("Failed to display board information".to_string());
+                }
+            }
+            Some("quit") => {
+                if let Ok(brain) = self.player.lock() {
+                    let _ = brain.quit();
+                } else {
+                    sender.send("Failed to quit player, consider aborting process".to_string());
+                }
+            }
             _ => self.log(format!("Unknown Command: {}\n", cmd)),
         }
     }
@@ -113,6 +139,14 @@ impl CactusEngine {
             return;
         };
         let _ = log.write(msg.as_bytes());
+    }
+
+    fn set_on_move_chosen<S: SenderLike + Send + Sync + 'static>(&self, sender: S) {
+        let player_clone = self.player.clone();
+        self.player.lock().unwrap().on_move_chosen = Some(Box::new(move |mv| {
+            sender.send(format!("bestmove {}", mv));
+            let _ = player_clone;
+        }));
     }
 }
 
@@ -128,8 +162,15 @@ impl Default for CactusEngine {
             PathBuf::from("cactus.log")
         };
 
-        Self {
+        let brain = Brain::new().unwrap();
+        let player = Arc::new(Mutex::new(brain));
+
+        let engine = Self {
+            player: player,
             log: File::create(log_path).ok(),
-        }
+        };
+        engine.set_on_move_chosen(StdoutSender);
+
+        engine
     }
 }

@@ -10,6 +10,14 @@ impl Searcher {
     }
 
     pub fn clear_for_new_position(&mut self) {
-        
+        todo!("Not implemented")
+    }
+
+    pub fn start_search(&mut self) {
+        todo!("Not implemented")
+    }
+
+    pub fn end_search(&mut self) {
+        todo!("Not implemented")
     }
 }
