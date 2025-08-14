@@ -12,12 +12,16 @@ pub struct RepetitionTable {
 }
 
 impl RepetitionTable {
-    pub fn new(board: &Board) -> Self {
-        let mut table = Self {
+    pub fn new() -> Self {
+        Self {
             hashes: [u64::default(); HASHES_LEN],
             start_indices: [usize::default(); HASHES_LEN + 1],
             count: 0,
-        };
+        }
+    }
+
+    pub fn init(board: &Board) -> Self {
+        let mut table = Self::new();
 
         let initial_hashes: Vec<&u64> = board.repetition_history.iter().rev().collect();
         table.count = initial_hashes.len();

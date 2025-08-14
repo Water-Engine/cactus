@@ -36,6 +36,7 @@ impl Brain {
     pub fn new() -> Result<Self, String> {
         let mut board = Board::new();
         board.load_start_pos()?;
+
         let brain = Self {
             on_move_chosen: None,
 
