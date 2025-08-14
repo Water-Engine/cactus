@@ -203,24 +203,27 @@ impl CactusEngine {
         if is_uci_str {
             player.set_position(fen::STARTING_FEN)?;
         } else if is_fen_str {
-            let custom_fen = try_get_labeled_value_string(message, "fen", &POSITION_LABELS, "");
-            let custom_fen = custom_fen.trim();
-            player.set_position(custom_fen)?;
+            if let Some(custom_fen) = try_get_labeled_value_string(message, "fen", &POSITION_LABELS)
+            {
+                let custom_fen = custom_fen.trim();
+                player.set_position(custom_fen)?;
+            }
         } else {
             return Err("Invalid position command: expected either 'startpos' or 'fen'".into());
         }
 
-        let all_moves = try_get_labeled_value_string(message, "moves", &POSITION_LABELS, "");
-        if !all_moves.is_empty() {
-            let move_list: Vec<&str> = all_moves.split(' ').filter(|s| !s.is_empty()).collect();
-            for &mv in &move_list {
-                player.make_move(mv)?;
-            }
+        if let Some(all_moves) = try_get_labeled_value_string(message, "moves", &POSITION_LABELS) {
+            if !all_moves.is_empty() {
+                let move_list: Vec<&str> = all_moves.split(' ').filter(|s| !s.is_empty()).collect();
+                for &mv in &move_list {
+                    player.make_move(mv)?;
+                }
 
-            return Ok(format!(
-                "Make moves after setting position: {}",
-                move_list.len()
-            ));
+                return Ok(format!(
+                    "Make moves after setting position: {}",
+                    move_list.len()
+                ));
+            }
         }
 
         Ok("".to_string())
@@ -231,14 +234,14 @@ impl CactusEngine {
 
         let think_time_ms;
         if message.to_lowercase().contains("movetime") {
-            think_time_ms = try_get_labeled_value_int(message, "movetime", &GO_LABELS, 0);
+            think_time_ms = try_get_labeled_value_int(message, "movetime", &GO_LABELS).unwrap_or(0);
         } else {
             let time_remaining_white_ms =
-                try_get_labeled_value_int(message, "wtime", &GO_LABELS, 0);
+                try_get_labeled_value_int(message, "wtime", &GO_LABELS).unwrap_or(0);
             let time_remaining_black_ms =
-                try_get_labeled_value_int(message, "btime", &GO_LABELS, 0);
-            let increment_white_ms = try_get_labeled_value_int(message, "winc", &GO_LABELS, 0);
-            let increment_black_ms = try_get_labeled_value_int(message, "binc", &GO_LABELS, 0);
+                try_get_labeled_value_int(message, "btime", &GO_LABELS).unwrap_or(0);
+            let increment_white_ms = try_get_labeled_value_int(message, "winc", &GO_LABELS).unwrap_or(0);
+            let increment_black_ms = try_get_labeled_value_int(message, "binc", &GO_LABELS).unwrap_or(0);
 
             think_time_ms = player.choose_think_time(
                 time_remaining_white_ms,
@@ -252,26 +255,16 @@ impl CactusEngine {
     }
 }
 
-fn try_get_labeled_value_int(
-    text: &str,
-    label: &str,
-    all_labels: &[&str],
-    default_value: i32,
-) -> i32 {
-    let value_string =
-        try_get_labeled_value_string(text, label, all_labels, &default_value.to_string());
-    if let Ok(result) = (value_string.split(' ').collect::<Vec<&str>>())[0].parse::<i32>() {
-        return result;
+fn try_get_labeled_value_int(text: &str, label: &str, all_labels: &[&str]) -> Option<i32> {
+    if let Some(value_string) = try_get_labeled_value_string(text, label, all_labels) {
+        if let Ok(result) = (value_string.split(' ').collect::<Vec<&str>>())[0].parse::<i32>() {
+            return Some(result);
+        }
     }
-    return default_value;
+    None
 }
 
-fn try_get_labeled_value_string(
-    text: &str,
-    label: &str,
-    all_labels: &[&str],
-    default_value: &str,
-) -> String {
+fn try_get_labeled_value_string(text: &str, label: &str, all_labels: &[&str]) -> Option<String> {
     let text = text.trim();
     if let Some(value_start) = text.find(label) {
         let value_start = value_start + label.len() + 1;
@@ -287,7 +280,7 @@ fn try_get_labeled_value_string(
             }
         });
 
-        return text[value_start..value_end].to_string();
+        return Some(text[value_start..value_end].to_string());
     }
-    return default_value.to_string();
+    None
 }

@@ -1,6 +1,6 @@
 use std::ops::{Index, IndexMut};
 
-use crate::engine::game::board::Color;
+use crate::engine::{eval::evaluation, game::board::Color};
 
 pub const NONE: i32 = 0;
 pub const PAWN: i32 = 1;
@@ -130,6 +130,11 @@ impl Piece {
         }
     }
 
+    /// Retrieves the EVALUATION value of the pieces type, not its underlying field value
+    pub fn get_value(&self) -> i32 {
+        get_piece_value(self.get_type())
+    }
+
     pub fn can_ortho_slide(&self) -> bool {
         match self.get_type() {
             QUEEN | ROOK => true,
@@ -149,6 +154,17 @@ impl Piece {
             QUEEN | BISHOP | ROOK => true,
             _ => false,
         }
+    }
+}
+
+pub fn get_piece_value(piece_type: i32) -> i32 {
+    match piece_type {
+        QUEEN => evaluation::QUEEN_VALUE,
+        ROOK => evaluation::ROOK_VALUE,
+        KNIGHT => evaluation::KNIGHT_VALUE,
+        BISHOP => evaluation::BISHOP_VALUE,
+        PAWN => evaluation::PAWN_VALUE,
+        _ => 0,
     }
 }
 
