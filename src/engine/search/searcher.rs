@@ -17,3 +17,7 @@ impl Searcher {
         todo!("Not implemented")
     }
 }
+
+pub fn is_mate_score(score: i32) -> bool {
+    todo!("Not implemented")
+}
