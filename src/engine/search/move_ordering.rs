@@ -13,7 +13,25 @@ const REGULAR_BIAS: i32 = 0;
 pub struct MoveOrdering {
     move_scores: [i32; MAX_MOVES],
     killer_moves: [Killers; MAX_KILLER_MOVE_PLY],
-    history: [[[i32; 64]; 64]; 2]
+    history: [[[i32; 64]; 64]; 2],
+}
+
+impl MoveOrdering {
+    pub fn new() -> Self {
+        Self {
+            move_scores: [i32::default(); MAX_MOVES],
+            killer_moves: std::array::from_fn(|_| Killers::default()),
+            history: [[[i32::default(); 64]; 64]; 2],
+        }
+    }
+
+    pub fn clear_history(&mut self) {
+        self.history = [[[i32::default(); 64]; 64]; 2];
+    }
+
+    pub fn clear_killers(&mut self) {
+        self.killer_moves = std::array::from_fn(|_| Killers::default());
+    }
 }
 
 #[derive(Debug, Default)]

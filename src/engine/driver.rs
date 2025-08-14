@@ -240,8 +240,10 @@ impl CactusEngine {
                 try_get_labeled_value_int(message, "wtime", &GO_LABELS).unwrap_or(0);
             let time_remaining_black_ms =
                 try_get_labeled_value_int(message, "btime", &GO_LABELS).unwrap_or(0);
-            let increment_white_ms = try_get_labeled_value_int(message, "winc", &GO_LABELS).unwrap_or(0);
-            let increment_black_ms = try_get_labeled_value_int(message, "binc", &GO_LABELS).unwrap_or(0);
+            let increment_white_ms =
+                try_get_labeled_value_int(message, "winc", &GO_LABELS).unwrap_or(0);
+            let increment_black_ms =
+                try_get_labeled_value_int(message, "binc", &GO_LABELS).unwrap_or(0);
 
             think_time_ms = player.choose_think_time(
                 time_remaining_white_ms,
