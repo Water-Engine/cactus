@@ -94,47 +94,47 @@ impl CactusEngine {
     fn handle_cmd<S: SenderLike>(&mut self, cmd: &str, sender: &S) {
         self.log(format!("Received Command: {}\n", cmd));
 
-        let cmd = cmd.trim().to_lowercase();
+        let cmd = cmd.trim().to_string();
         let mut parts: VecDeque<&str> = cmd.split_whitespace().collect();
-        let cmd_lead = parts.pop_front();
+        let cmd_lead = parts.pop_front().map(|s| s.to_lowercase());
 
         match cmd_lead {
-            Some("uci") => {
+            Some(val) if val == "uci".to_string() => {
                 sender.send("id name CactusEngine".to_string());
                 sender.send("id author Trevor Swan".to_string());
                 sender.send("uciok".to_string());
             }
-            Some("isready") => sender.send("readyok".to_string()),
-            Some("ucinewgame") => {
+            Some(val) if val == "isready".to_string() => sender.send("readyok".to_string()),
+            Some(val) if val == "ucinewgame".to_string() => {
                 if let Ok(brain) = self.player.lock() {
                     let _ = brain.notify_new_game();
                 } else {
                     sender.send("Failed to start new game".to_string());
                 }
             }
-            Some("position") => {
+            Some(val) if val == "position".to_string() => {
                 let result = self.process_position_cmd(&cmd);
                 self.log(result.unwrap_or_else(|e| e))
             }
-            Some("go") => {
+            Some(val) if val == "go".to_string() => {
                 let result = self.process_go_command(&cmd);
                 self.log(result.unwrap_or_else(|e| e))
             }
-            Some("stop") => {
+            Some(val) if val == "stop".to_string() => {
                 if let Ok(brain) = self.player.lock() {
                     let _ = brain.stop_thinking();
                 } else {
                     sender.send("Failed to stop player, consider aborting process".to_string());
                 }
             }
-            Some("d") => {
+            Some(val) if val == "d".to_string() => {
                 if let Ok(brain) = self.player.lock() {
                     sender.send(brain.display_board().unwrap_or_else(|e| e));
                 } else {
                     sender.send("Failed to display board information".to_string());
                 }
             }
-            Some("quit") => {
+            Some(val) if val == "quit".to_string() => {
                 if let Ok(brain) = self.player.lock() {
                     let _ = brain.quit();
                 } else {
@@ -189,8 +189,8 @@ impl Default for CactusEngine {
 // Helper IMPL
 impl CactusEngine {
     fn process_position_cmd(&mut self, message: &str) -> Result<String, String> {
-        let is_uci_str = message.contains(&"startpos".to_string());
-        let is_fen_str = message.contains(&"fen".to_string());
+        let is_uci_str = message.to_lowercase().contains(&"startpos".to_string());
+        let is_fen_str = message.to_lowercase().contains(&"fen".to_string());
         if is_uci_str && is_fen_str {
             return Err(
                 "Invalid position command: expected either 'startpos' or 'fen', received both"
@@ -204,7 +204,8 @@ impl CactusEngine {
             player.set_position(fen::STARTING_FEN)?;
         } else if is_fen_str {
             let custom_fen = try_get_labeled_value_string(message, "fen", &POSITION_LABELS, "");
-            player.set_position(&custom_fen)?;
+            let custom_fen = custom_fen.trim();
+            player.set_position(custom_fen)?;
         } else {
             return Err("Invalid position command: expected either 'startpos' or 'fen'".into());
         }
@@ -212,7 +213,6 @@ impl CactusEngine {
         let all_moves = try_get_labeled_value_string(message, "moves", &POSITION_LABELS, "");
         if !all_moves.is_empty() {
             let move_list: Vec<&str> = all_moves.split(' ').filter(|s| !s.is_empty()).collect();
-            dbg!(&move_list);
             for &mv in &move_list {
                 player.make_move(mv)?;
             }
@@ -230,7 +230,7 @@ impl CactusEngine {
         let mut player = self.player.lock().map_err(|_| "Player mutex poisoned")?;
 
         let think_time_ms;
-        if message.contains("movetime") {
+        if message.to_lowercase().contains("movetime") {
             think_time_ms = try_get_labeled_value_int(message, "movetime", &GO_LABELS, 0);
         } else {
             let time_remaining_white_ms =
@@ -274,7 +274,7 @@ fn try_get_labeled_value_string(
 ) -> String {
     let text = text.trim();
     if let Some(value_start) = text.find(label) {
-        let value_start = value_start + label.len();
+        let value_start = value_start + label.len() + 1;
         let mut value_end = text.len();
 
         all_labels.iter().for_each(|&other_id| {
