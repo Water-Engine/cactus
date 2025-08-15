@@ -5,6 +5,7 @@ use crate::engine::{
 
 const HASHES_LEN: usize = 256;
 
+#[derive(Debug)]
 pub struct RepetitionTable {
     pub hashes: [u64; HASHES_LEN],
     pub start_indices: [usize; HASHES_LEN + 1],
@@ -67,6 +68,7 @@ pub const EXACT: i32 = 0;
 pub const LOWER_BOUND: i32 = 1;
 pub const UPPER_BOUND: i32 = 2;
 
+#[derive(Debug)]
 /// Reference: https://web.archive.org/web/20071031100051/http://www.brucemo.com/compchess/programming/hashing.htm
 pub struct TranspositionTable {
     pub entries: Vec<Option<Entry>>,

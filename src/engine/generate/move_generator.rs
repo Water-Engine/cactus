@@ -101,8 +101,8 @@ impl MoveGenerator {
         mg.white_to_move = board.move_color() == Color::White;
         mg.friendly_color = board.move_color();
         mg.opponent_color = board.opponent_color();
-        mg.friendly_king_square = board.king_squares[board.move_color().to_piece_color() as usize];
-        mg.friendly_index = board.move_color().to_piece_color();
+        mg.friendly_king_square = board.king_squares[board.move_color() as usize];
+        mg.friendly_index = board.move_color() as i32;
         mg.enemy_index = 1 - mg.friendly_index;
 
         // Store some bitboards for convenience
@@ -484,8 +484,7 @@ impl MoveGenerator {
             return;
         }
 
-        moves[self.current_move_index] =
-            Move::from((start_square, target_square, r#move::PROMOTE_TO_QUEEN_FLAG));
+        moves.push(Move::from((start_square, target_square, r#move::PROMOTE_TO_QUEEN_FLAG)));
         self.current_move_index += 1;
 
         if self.generate_quiet_moves {
@@ -495,22 +494,19 @@ impl MoveGenerator {
                         return;
                     }
 
-                    moves[self.current_move_index] =
-                        Move::from((start_square, target_square, r#move::PROMOTE_TO_KNIGHT_FLAG));
+                    moves.push(Move::from((start_square, target_square, r#move::PROMOTE_TO_KNIGHT_FLAG)));
                     self.current_move_index += 1;
                     if self.current_move_index > MAX_MOVES {
                         return;
                     }
 
-                    moves[self.current_move_index] =
-                        Move::from((start_square, target_square, r#move::PROMOTE_TO_ROOK_FLAG));
+                    moves.push(Move::from((start_square, target_square, r#move::PROMOTE_TO_ROOK_FLAG)));
                     self.current_move_index += 1;
                     if self.current_move_index > MAX_MOVES {
                         return;
                     }
 
-                    moves[self.current_move_index] =
-                        Move::from((start_square, target_square, r#move::PROMOTE_TO_BISHOP_FLAG));
+                    moves.push(Move::from((start_square, target_square, r#move::PROMOTE_TO_BISHOP_FLAG)));
                     self.current_move_index += 1;
                 }
                 PromotionMode::QueenAndKnight => {
@@ -518,8 +514,7 @@ impl MoveGenerator {
                         return;
                     }
 
-                    moves[self.current_move_index] =
-                        Move::from((start_square, target_square, r#move::PROMOTE_TO_KNIGHT_FLAG));
+                    moves.push(Move::from((start_square, target_square, r#move::PROMOTE_TO_KNIGHT_FLAG)));
                     self.current_move_index += 1;
                 }
                 _ => {}

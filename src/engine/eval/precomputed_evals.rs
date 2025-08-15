@@ -61,21 +61,21 @@ impl PieceSquareTable {
     fn new() -> Self {
         let mut tables = [[i32::default(); 64]; piece::MAX_PIECE_INDEX + 1];
 
-        tables[piece::Piece::from(((piece::PAWN, piece::WHITE))).value as usize] = PAWNS;
-        tables[piece::Piece::from(((piece::ROOK, piece::WHITE))).value as usize] = ROOKS;
-        tables[piece::Piece::from(((piece::KNIGHT, piece::WHITE))).value as usize] = KNIGHTS;
-        tables[piece::Piece::from(((piece::BISHOP, piece::WHITE))).value as usize] = BISHOPS;
-        tables[piece::Piece::from(((piece::QUEEN, piece::WHITE))).value as usize] = QUEENS;
+        tables[piece::Piece::from((piece::PAWN, piece::WHITE)).value as usize] = PAWNS;
+        tables[piece::Piece::from((piece::ROOK, piece::WHITE)).value as usize] = ROOKS;
+        tables[piece::Piece::from((piece::KNIGHT, piece::WHITE)).value as usize] = KNIGHTS;
+        tables[piece::Piece::from((piece::BISHOP, piece::WHITE)).value as usize] = BISHOPS;
+        tables[piece::Piece::from((piece::QUEEN, piece::WHITE)).value as usize] = QUEENS;
 
-        tables[piece::Piece::from(((piece::PAWN, piece::BLACK))).value as usize] =
+        tables[piece::Piece::from((piece::PAWN, piece::BLACK)).value as usize] =
             get_flipped_table(PAWNS);
-        tables[piece::Piece::from(((piece::ROOK, piece::BLACK))).value as usize] =
+        tables[piece::Piece::from((piece::ROOK, piece::BLACK)).value as usize] =
             get_flipped_table(ROOKS);
-        tables[piece::Piece::from(((piece::KNIGHT, piece::BLACK))).value as usize] =
+        tables[piece::Piece::from((piece::KNIGHT, piece::BLACK)).value as usize] =
             get_flipped_table(KNIGHTS);
-        tables[piece::Piece::from(((piece::BISHOP, piece::BLACK))).value as usize] =
+        tables[piece::Piece::from((piece::BISHOP, piece::BLACK)).value as usize] =
             get_flipped_table(BISHOPS);
-        tables[piece::Piece::from(((piece::QUEEN, piece::BLACK))).value as usize] =
+        tables[piece::Piece::from((piece::QUEEN, piece::BLACK)).value as usize] =
             get_flipped_table(QUEENS);
 
         Self { tables: tables }

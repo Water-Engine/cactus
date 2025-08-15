@@ -55,13 +55,13 @@ impl Magic {
     pub fn get_rook_attacks(&self, square: i32, blockers: u64) -> u64 {
         let square = square as usize;
         let key =
-            ((blockers & self.rook_mask[square]) * ROOK_MAGICS[square]) >> ROOK_SHIFTS[square];
+            (blockers & self.rook_mask[square]).wrapping_mul(ROOK_MAGICS[square]) >> ROOK_SHIFTS[square];
         self.rook_attacks[square][key as usize]
     }
 
     pub fn get_bishop_attacks(&self, square: i32, blockers: u64) -> u64 {
         let square = square as usize;
-        let key = ((blockers & self.bishop_mask[square]) * BISHOP_MAGICS[square])
+        let key = (blockers & self.bishop_mask[square]).wrapping_mul(BISHOP_MAGICS[square])
             >> BISHOP_SHIFTS[square];
         self.bishop_attacks[square][key as usize]
     }
@@ -74,11 +74,11 @@ impl Magic {
         let movement_mask = Self::create_movement_mask(square, rook);
         let blocker_patterns = Self::create_all_blockers(movement_mask);
 
-        blocker_patterns.iter().for_each(|pattern| {
-            let idx = (pattern * magic) >> left_shift;
-            let moves = Self::legal_move_bb(square, *pattern, rook);
+        for pattern in blocker_patterns {
+            let idx = pattern.wrapping_mul(magic) >> (left_shift as u64);
+            let moves = Self::legal_move_bb(square, pattern, rook);
             table[idx as usize] = moves;
-        });
+        }
 
         table
     }

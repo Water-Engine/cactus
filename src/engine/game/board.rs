@@ -101,7 +101,7 @@ pub struct Board {
     pub state: State,
     pub all_moves: Vec<Move>,
 
-    all_piece_lists: [PieceList; piece::MAX_PIECE_INDEX + 1],
+    pub all_piece_lists: [PieceList; piece::MAX_PIECE_INDEX + 1],
     game_state_history: VecDeque<State>,
     start_pos_info: PositionInfo,
     cached_in_check_value: bool,
@@ -188,6 +188,9 @@ impl Board {
             .then(|| piece::Piece::from((piece::PAWN, (opponent_color.to_piece_color()))).value)
             .unwrap_or(self.squares[target_square as usize]);
         let captured_piece_type = piece::Piece::from(captured_piece).get_type();
+        if captured_piece_type == piece::KING {
+            return;
+        }
 
         let prev_castle_state = self.state.castling_rights;
         let prev_en_passant_file = self.state.en_passant_file;

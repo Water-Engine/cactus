@@ -1,5 +1,11 @@
 use crate::engine::{
-    eval::precomputed_evals, game::{board::Board, r#move::{self, Move}, piece}, generate::{bitboard, move_generator::MAX_MOVES}
+    eval::precomputed_evals,
+    game::{
+        board::Board,
+        r#move::{self, Move},
+        piece,
+    },
+    generate::{bitboard, move_generator::MAX_MOVES},
 };
 
 pub const MAX_KILLER_MOVE_PLY: usize = 32;
@@ -12,16 +18,17 @@ const KILLER_BIAS: i32 = 4 * MILLION;
 const LOSING_CAPTURE_BIAS: i32 = 2 * MILLION;
 const REGULAR_BIAS: i32 = 0;
 
+#[derive(Debug)]
 pub struct MoveOrdering {
-    move_scores: [i32; MAX_MOVES],
-    killer_moves: [Killers; MAX_KILLER_MOVE_PLY],
-    history: [[[i32; 64]; 64]; 2],
+    pub move_scores: Vec<i32>,
+    pub killer_moves: [Killers; MAX_KILLER_MOVE_PLY],
+    pub history: [[[i32; 64]; 64]; 2],
 }
 
 impl MoveOrdering {
     pub fn new() -> Self {
         Self {
-            move_scores: [i32::default(); MAX_MOVES],
+            move_scores: Vec::with_capacity(MAX_MOVES),
             killer_moves: std::array::from_fn(|_| Killers::default()),
             history: [[[i32::default(); 64]; 64]; 2],
         }
@@ -61,7 +68,7 @@ impl MoveOrdering {
             let mv = moves[i];
 
             if mv == hash_move {
-                self.move_scores[i] = HASH_MOVE_SCORE;
+                self.move_scores.push(HASH_MOVE_SCORE);
                 continue;
             }
 
@@ -83,11 +90,18 @@ impl MoveOrdering {
 
             if is_capture {
                 // Order moves to try capturing the most valuable opponent piece with least valuable of own pieces first
-                let capture_material_delta = piece::get_piece_value(capture_piece_type) - piece_value;
-                let opponent_can_recapture = bitboard::BitBoard::contains_square(opponent_pawn_attacks | opponent_attacks, target_square);
+                let capture_material_delta =
+                    piece::get_piece_value(capture_piece_type) - piece_value;
+                let opponent_can_recapture = bitboard::BitBoard::contains_square(
+                    opponent_pawn_attacks | opponent_attacks,
+                    target_square,
+                );
 
                 if opponent_can_recapture {
-                    score += (capture_material_delta >= 0).then(|| WINNING_CAPTURE_BIAS).unwrap_or(LOSING_CAPTURE_BIAS) + capture_material_delta;
+                    score += (capture_material_delta >= 0)
+                        .then(|| WINNING_CAPTURE_BIAS)
+                        .unwrap_or(LOSING_CAPTURE_BIAS)
+                        + capture_material_delta;
                 } else {
                     score += WINNING_CAPTURE_BIAS + capture_material_delta;
                 }
@@ -110,42 +124,33 @@ impl MoveOrdering {
             }
 
             if !is_capture {
-                let is_killer = !in_q_search && ply < MAX_KILLER_MOVE_PLY as i32 && self.killer_moves[ply as usize].matches(mv);
+                let is_killer = !in_q_search
+                    && ply < MAX_KILLER_MOVE_PLY as i32
+                    && self.killer_moves[ply as usize].matches(mv);
                 score += is_killer.then(|| KILLER_BIAS).unwrap_or(REGULAR_BIAS);
-                score += self.history[board.move_color() as usize][start_square as usize][target_square as usize];
+                score += self.history[board.move_color() as usize][start_square as usize]
+                    [target_square as usize];
             }
 
-            self.move_scores[i] = score;
+            self.move_scores.push(score);
         }
 
-        quicksort(moves, &mut self.move_scores, 0, moves.len() - 1);
+        sort_by_scores_desc(moves, &mut self.move_scores);
     }
 }
 
-fn quicksort(moves: &mut Vec<Move>, scores: &mut [i32; MAX_MOVES], low: usize, high: usize) {
-    if low < high {
-        let pivot_idx = partition(moves, scores, low, high);
-        quicksort(moves, scores, low, pivot_idx - 1);
-        quicksort(moves, scores, pivot_idx + 1, high);
-    }
-}
-
-fn partition(moves: &mut Vec<Move>, scores: &mut [i32; MAX_MOVES], low: usize, high: usize) -> usize {
-    let pivot_score = scores[high];
-    let mut i = low - 1;
-
-    for j in low..high {
-        if scores[j] > pivot_score {
-            i += 1;
-            moves.swap(i, j);
-            scores.swap(i, j as usize);
-        }
+fn sort_by_scores_desc(moves: &mut [Move], scores: &mut [i32]) {
+    if moves.len() != scores.len() {
+        return;
     }
 
-    moves.swap(i + 1, high);
-    scores.swap(i + 1, high);
+    let mut paired: Vec<(i32, Move)> = scores.iter().copied().zip(moves.iter().cloned()).collect();
+    paired.sort_unstable_by(|a, b| b.0.cmp(&a.0));
 
-    return i + 1;
+    for (i, (score, mv)) in paired.into_iter().enumerate() {
+        scores[i] = score;
+        moves[i] = mv;
+    }
 }
 
 #[derive(Debug, Default)]

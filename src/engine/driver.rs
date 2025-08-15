@@ -26,6 +26,7 @@ const GO_LABELS: [&str; 7] = [
 pub struct CactusEngine {
     player: Arc<Mutex<Brain>>,
     log: Option<File>,
+    position_loaded: bool,
 }
 
 struct StdoutSender;
@@ -179,6 +180,7 @@ impl Default for CactusEngine {
         let engine = Self {
             player: player,
             log: File::create(log_path).ok(),
+            position_loaded: false,
         };
         engine.set_on_move_chosen(StdoutSender);
 
@@ -219,6 +221,7 @@ impl CactusEngine {
                     player.make_move(mv)?;
                 }
 
+                self.position_loaded = true;
                 return Ok(format!(
                     "Make moves after setting position: {}",
                     move_list.len()
@@ -226,11 +229,16 @@ impl CactusEngine {
             }
         }
 
+        self.position_loaded = true;
         Ok("".to_string())
     }
 
     fn process_go_command(&mut self, message: &str) -> Result<String, String> {
         let mut player = self.player.lock().map_err(|_| "Player mutex poisoned")?;
+
+        if !self.position_loaded {
+            return Err("Position not loaded, cannot go".into());
+        }
 
         let think_time_ms;
         if message.to_lowercase().contains("movetime") {
@@ -253,6 +261,7 @@ impl CactusEngine {
             )?;
         }
         player.think_timed(think_time_ms)?;
+        self.position_loaded = false;
         Ok(format!("Thinking for: {} ms.", think_time_ms))
     }
 }

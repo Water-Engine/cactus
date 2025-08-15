@@ -21,7 +21,7 @@ pub struct Brain {
     pub thinking: bool,
     pub latest_move_is_book_move: bool,
 
-    searcher: Arc<Mutex<Searcher>>,
+    pub searcher: Arc<Mutex<Searcher>>,
     board: Arc<Mutex<Board>>,
     book: Arc<Mutex<OpeningBook>>,
 
@@ -147,6 +147,7 @@ impl Brain {
         let handle = Arc::clone(&self.search_wait_handle);
         let is_quitting = Arc::clone(&self.is_quitting);
         let searcher = Arc::clone(&self.searcher);
+        let board = Arc::clone(&self.board);
 
         std::thread::spawn(move || {
             loop {
@@ -163,7 +164,9 @@ impl Brain {
 
                 // Run the search
                 if let Ok(mut searcher) = searcher.lock() {
-                    searcher.start_search()
+                    if let Ok(mut board) = board.lock() {
+                        searcher.start_search(&mut board)
+                    }
                 }
             }
         });
@@ -272,9 +275,9 @@ impl CancellationToken {
     }
     pub fn is_cancelled(&self) -> bool {
         match self.cancelled.lock() {
-            Ok(mut cancelled) => *cancelled,
+            Ok(cancelled) => *cancelled,
             Err(poisoned) => {
-                let mut cancelled = poisoned.into_inner();
+                let cancelled = poisoned.into_inner();
                 *cancelled
             }
         }
