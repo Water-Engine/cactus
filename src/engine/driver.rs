@@ -154,11 +154,12 @@ impl CactusEngine {
     }
 
     fn set_on_move_chosen<S: SenderLike + Send + Sync + 'static>(&self, sender: S) {
-        let player_clone = self.player.clone();
-        self.player.lock().unwrap().on_move_chosen = Arc::new(Mutex::new(Some(Box::new(move |mv| {
-            sender.send(format!("bestmove {}", mv));
-            let _ = player_clone;
-        }))));
+        let player_clone = &self.player;
+        self.player.lock().unwrap().on_move_chosen =
+            Arc::new(Mutex::new(Some(Box::new(move |mv| {
+                sender.send(format!("bestmove {}", mv));
+                let _ = player_clone;
+            }))));
     }
 }
 
@@ -176,13 +177,13 @@ impl Default for CactusEngine {
 
         let brain = Brain::new().unwrap();
         let player = Arc::new(Mutex::new(brain));
+        player.lock().unwrap().set_on_move_chosen(StdoutSender);
 
         let engine = Self {
             player: player,
             log: File::create(log_path).ok(),
             position_loaded: false,
         };
-        engine.set_on_move_chosen(StdoutSender);
 
         engine
     }

@@ -138,6 +138,15 @@ impl Brain {
         let mut board = self.board.lock().map_err(|_| "Board mutex poisoned")?;
         Ok(board.to_string())
     }
+
+    pub fn set_on_move_chosen<S: super::driver::SenderLike + Send + Sync + 'static>(&self, sender: S) {
+        let on_move_chosen = Arc::clone(&self.on_move_chosen);
+
+        let mut callback_lock = on_move_chosen.lock().unwrap();
+        *callback_lock = Some(Box::new(move |mv: String| {
+            sender.send(format!("bestmove {}", mv));
+        }));
+    }
 }
 
 // Helper IMPL
@@ -208,7 +217,6 @@ fn spawn_search_thread(
             if let Ok(mut s) = searcher.lock() {
                 if let Ok(mut b) = board.lock() {
                     s.start_search(&mut b, time_ms);
-                    println!("Im done");
                     
                     if let Some(callback) = &*on_move_chosen.lock().unwrap() {
                         callback(s.bests().1.to_uci().replace("=", ""));
