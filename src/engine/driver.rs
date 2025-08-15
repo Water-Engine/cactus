@@ -155,10 +155,10 @@ impl CactusEngine {
 
     fn set_on_move_chosen<S: SenderLike + Send + Sync + 'static>(&self, sender: S) {
         let player_clone = self.player.clone();
-        self.player.lock().unwrap().on_move_chosen = Some(Box::new(move |mv| {
+        self.player.lock().unwrap().on_move_chosen = Arc::new(Mutex::new(Some(Box::new(move |mv| {
             sender.send(format!("bestmove {}", mv));
             let _ = player_clone;
-        }));
+        }))));
     }
 }
 

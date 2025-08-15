@@ -16,7 +16,7 @@ const USE_MAX_THINKING_TIME: bool = false;
 const MAX_THINK_TIME_MS: i32 = 2500;
 
 pub struct Brain {
-    pub on_move_chosen: Option<Box<dyn Fn(String) + Send + Sync>>,
+    pub on_move_chosen: Arc<Mutex<Option<Box<dyn Fn(String) + Send + Sync>>>>,
 
     pub thinking: bool,
     pub latest_move_is_book_move: bool,
@@ -35,7 +35,7 @@ impl Brain {
         board.load_start_pos()?;
 
         let brain = Self {
-            on_move_chosen: None,
+            on_move_chosen: Arc::new(Mutex::new(None::<Box<dyn Fn(String) + Send + Sync>>)),
 
             thinking: false,
             latest_move_is_book_move: false,
@@ -48,11 +48,13 @@ impl Brain {
             is_quitting: Arc::new(Mutex::new(bool::default())),
         };
 
+
         spawn_search_thread(
             Arc::clone(&brain.board),
             Arc::clone(&brain.searcher),
             Arc::clone(&brain.search_request),
             Arc::clone(&brain.is_quitting),
+            Arc::clone(&brain.on_move_chosen),
         );
         Ok(brain)
     }
@@ -159,7 +161,7 @@ impl Brain {
     fn on_search_complete(&mut self, mv: &Move) -> Result<(), String> {
         self.thinking = false;
         let move_string = mv.to_uci().replace("=", "");
-        if let Some(action_func) = &self.on_move_chosen {
+        if let Some(action_func) = &*self.on_move_chosen.lock().unwrap() {
             action_func(move_string);
         }
         Ok(())
@@ -181,21 +183,22 @@ fn spawn_search_thread(
     board: Arc<Mutex<Board>>,
     searcher: Arc<Mutex<Searcher>>,
     request: Arc<(Mutex<SearchRequest>, Condvar)>,
-    quitting: Arc<Mutex<bool>>,
+    is_quitting: Arc<Mutex<bool>>,
+    on_move_chosen: Arc<Mutex<Option<Box<dyn Fn(String) + Send + Sync>>>>,
 ) {
     std::thread::spawn(move || {
         loop {
-            if *quitting.lock().unwrap() {
+            if *is_quitting.lock().unwrap() {
                 break;
             }
 
             let (lock, cvar) = &*request;
             let mut req = lock.lock().unwrap();
-            while !req.ready && !*quitting.lock().unwrap() {
+            while !req.ready && !*is_quitting.lock().unwrap() {
                 req = cvar.wait(req).unwrap();
             }
 
-            if *quitting.lock().unwrap() {
+            if *is_quitting.lock().unwrap() {
                 break;
             }
 
@@ -205,7 +208,11 @@ fn spawn_search_thread(
             if let Ok(mut s) = searcher.lock() {
                 if let Ok(mut b) = board.lock() {
                     s.start_search(&mut b, time_ms);
-                    req.best_move_ready = Some(s.bests().1);
+                    println!("Im done");
+                    
+                    if let Some(callback) = &*on_move_chosen.lock().unwrap() {
+                        callback(s.bests().1.to_uci().replace("=", ""));
+                    }
                 }
             }
         }
@@ -215,7 +222,6 @@ fn spawn_search_thread(
 struct SearchRequest {
     time_ms: i32,
     ready: bool,
-    best_move_ready: Option<Move>,
 }
 
 impl Default for SearchRequest {
@@ -223,7 +229,6 @@ impl Default for SearchRequest {
         Self {
             time_ms: 0,
             ready: false,
-            best_move_ready: None,
         }
     }
 }
