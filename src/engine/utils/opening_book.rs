@@ -50,11 +50,6 @@ impl OpeningBook {
         book
     }
 
-    pub fn has_book_move(&self, position_fen: String) -> bool {
-        self.moves_by_position
-            .contains_key(&Self::remove_move_counters_from_fen(position_fen))
-    }
-
     /**
     Try to get a book move from the current position
     * Weight is clamped between 0 and 1 inclusive
@@ -62,11 +57,12 @@ impl OpeningBook {
     */
     pub fn try_get_book_move(&mut self, board: &mut Board, weight_pow: f32) -> Option<String> {
         let position_fen = board.current_fen(false);
+        let lookup_fen = Self::remove_move_counters_from_fen(position_fen);
         let weight_pow = weight_pow.clamp(0.0, 1.0);
 
         let weighted_play_count = |play_count: i32| (play_count as f32).powf(weight_pow) as i32;
 
-        if let Some(moves) = self.moves_by_position.get(&position_fen) {
+        if let Some(moves) = self.moves_by_position.get(&lookup_fen) {
             let mut total_play_count = 0;
             moves
                 .iter()
@@ -78,13 +74,15 @@ impl OpeningBook {
                 let weight =
                     weighted_play_count(moves[i].num_times_played) as f32 / total_play_count as f32;
                 weight_sum += weight;
-                weights[i] = weight;
+                weights.push(weight);
             }
 
             let mut prob_cum = Vec::with_capacity(moves.len());
-            for i in 0..weights.len() {
-                let prob = weights[i] / weight_sum;
-                prob_cum[i] = prob_cum[0.max(i - 1)] + prob;
+            let mut cumulative = 0.0;
+            for &weight in &weights {
+                let prob = weight / weight_sum;
+                cumulative += prob;
+                prob_cum.push(cumulative);
             }
 
             let random = self.rng.random::<f32>();

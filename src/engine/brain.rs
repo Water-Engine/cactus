@@ -24,11 +24,8 @@ pub struct Brain {
     pub searcher: Arc<Mutex<Searcher>>,
     board: Arc<Mutex<Board>>,
     book: Arc<Mutex<OpeningBook>>,
+    search_request: Arc<(Mutex<SearchRequest>, Condvar)>,
 
-    search_wait_handle: Arc<(Mutex<bool>, Condvar)>,
-    cancel_search_timer: Option<CancellationToken>,
-
-    current_search_id: Arc<Mutex<i32>>,
     is_quitting: Arc<Mutex<bool>>,
 }
 
@@ -46,14 +43,17 @@ impl Brain {
             searcher: Arc::new(Mutex::new(Searcher::new())),
             board: Arc::new(Mutex::new(board)),
             book: Arc::new(Mutex::new(OpeningBook::new(opening_book::BOOK))),
+            search_request: Arc::new((Mutex::new(SearchRequest::default()), Condvar::new())),
 
-            search_wait_handle: Arc::new((Mutex::new(false), Condvar::new())),
-            cancel_search_timer: None,
-
-            current_search_id: Arc::new(Mutex::new(i32::default())),
             is_quitting: Arc::new(Mutex::new(bool::default())),
         };
-        brain.spawn_search_thread();
+
+        spawn_search_thread(
+            Arc::clone(&brain.board),
+            Arc::clone(&brain.searcher),
+            Arc::clone(&brain.search_request),
+            Arc::clone(&brain.is_quitting),
+        );
         Ok(brain)
     }
 
@@ -112,9 +112,6 @@ impl Brain {
     pub fn think_timed(&mut self, time_ms: i32) -> Result<(), String> {
         self.latest_move_is_book_move = false;
         self.thinking = true;
-        if let Some(t) = &self.cancel_search_timer {
-            t.cancel();
-        }
 
         if let Some(book_mv) = self.try_get_opening_move()? {
             self.latest_move_is_book_move = true;
@@ -143,89 +140,16 @@ impl Brain {
 
 // Helper IMPL
 impl Brain {
-    pub fn spawn_search_thread(&self) {
-        let handle = Arc::clone(&self.search_wait_handle);
-        let is_quitting = Arc::clone(&self.is_quitting);
-        let searcher = Arc::clone(&self.searcher);
-        let board = Arc::clone(&self.board);
-
-        std::thread::spawn(move || {
-            loop {
-                if *is_quitting.lock().unwrap() {
-                    break;
-                }
-
-                let (lock, cvar) = &*handle;
-                let mut ready = lock.lock().unwrap();
-                while !*ready && !*is_quitting.lock().unwrap() {
-                    ready = cvar.wait(ready).unwrap();
-                }
-                *ready = false;
-
-                // Run the search
-                if let Ok(mut searcher) = searcher.lock() {
-                    if let Ok(mut board) = board.lock() {
-                        searcher.start_search(&mut board)
-                    }
-                }
-            }
-        });
-    }
-
     fn start_search(&mut self, time_ms: i32) -> Result<(), String> {
-        {
-            let mut id = self
-                .current_search_id
-                .lock()
-                .map_err(|_| "Current search id mutex poisoned")?;
-            *id += 1;
-        }
-
-        {
-            let (lock, cvar) = &*self.search_wait_handle;
-            if let Ok(mut ready) = lock.lock() {
-                *ready = true;
-                cvar.notify_one();
-            } else {
-                return Err("Search wait handle mutex poisoned".into());
-            }
-        }
-
-        let token = CancellationToken::new();
-        self.cancel_search_timer = Some(token.clone());
-
-        let this_search_id = *self
-            .current_search_id
-            .lock()
-            .map_err(|_| "Current search id mutex poisoned")?;
-        let searcher = Arc::clone(&self.searcher);
-        let is_quitting = Arc::clone(&self.is_quitting);
-
-        std::thread::spawn(move || {
-            use std::time::Duration;
-            std::thread::sleep(Duration::from_millis(time_ms as u64));
-
-            if token.is_cancelled() {
-                return;
-            }
-            if *is_quitting.lock().unwrap() {
-                return;
-            }
-
-            if let Ok(mut s) = searcher.lock() {
-                s.end_search();
-            }
-        });
-
+        let (lock, cvar) = &*self.search_request;
+        let mut req = lock.lock().map_err(|_| "Lock failed")?;
+        req.time_ms = time_ms;
+        req.ready = true;
+        cvar.notify_one();
         Ok(())
     }
 
-    /// Ends the current search
     fn end_search(&self) -> Result<(), String> {
-        if let Some(cancellation_token) = &self.cancel_search_timer {
-            cancellation_token.cancel();
-        }
-
         if let Ok(mut searcher) = self.searcher.lock() {
             searcher.end_search();
         }
@@ -253,33 +177,53 @@ impl Brain {
     }
 }
 
-#[derive(Clone)]
-pub struct CancellationToken {
-    cancelled: Arc<Mutex<bool>>,
+fn spawn_search_thread(
+    board: Arc<Mutex<Board>>,
+    searcher: Arc<Mutex<Searcher>>,
+    request: Arc<(Mutex<SearchRequest>, Condvar)>,
+    quitting: Arc<Mutex<bool>>,
+) {
+    std::thread::spawn(move || {
+        loop {
+            if *quitting.lock().unwrap() {
+                break;
+            }
+
+            let (lock, cvar) = &*request;
+            let mut req = lock.lock().unwrap();
+            while !req.ready && !*quitting.lock().unwrap() {
+                req = cvar.wait(req).unwrap();
+            }
+
+            if *quitting.lock().unwrap() {
+                break;
+            }
+
+            let time_ms = req.time_ms;
+            req.ready = false;
+
+            if let Ok(mut s) = searcher.lock() {
+                if let Ok(mut b) = board.lock() {
+                    s.start_search(&mut b, time_ms);
+                    req.best_move_ready = Some(s.bests().1);
+                }
+            }
+        }
+    });
 }
 
-impl CancellationToken {
-    pub fn new() -> Self {
+struct SearchRequest {
+    time_ms: i32,
+    ready: bool,
+    best_move_ready: Option<Move>,
+}
+
+impl Default for SearchRequest {
+    fn default() -> Self {
         Self {
-            cancelled: Arc::new(Mutex::new(false)),
-        }
-    }
-    pub fn cancel(&self) {
-        match self.cancelled.lock() {
-            Ok(mut cancelled) => *cancelled = true,
-            Err(poisoned) => {
-                let mut cancelled = poisoned.into_inner();
-                *cancelled = true
-            }
-        }
-    }
-    pub fn is_cancelled(&self) -> bool {
-        match self.cancelled.lock() {
-            Ok(cancelled) => *cancelled,
-            Err(poisoned) => {
-                let cancelled = poisoned.into_inner();
-                *cancelled
-            }
+            time_ms: 0,
+            ready: false,
+            best_move_ready: None,
         }
     }
 }

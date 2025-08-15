@@ -69,7 +69,7 @@ impl Board {
     pub fn generate_moves(&mut self, captures_only: bool) -> (Vec<Move>, MoveGenerator) {
         let mut moves = Vec::with_capacity(MAX_MOVES);
         let mg = self.append_moves(&mut moves, captures_only);
-        (moves.to_vec(), mg)
+        (moves, mg)
     }
 
     pub fn append_moves(&mut self, moves: &mut Vec<Move>, captures_only: bool) -> MoveGenerator {
@@ -182,11 +182,11 @@ impl MoveGenerator {
                     }
 
                     moves.push(Move::from(
-                        ((
+                        (
                             self.friendly_king_square,
                             target_square,
                             r#move::CASTLE_FLAG,
-                        )),
+                        ),
                     ));
                     self.current_move_index += 1;
                 }

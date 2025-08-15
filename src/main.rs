@@ -5,6 +5,7 @@ use crate::coupling::{EngineHandle, external::ExternalEngine};
 use crate::engine::brain;
 use crate::engine::driver::CactusEngine;
 use crate::engine::search::searcher;
+use crate::engine::utils::opening_book::{self, OpeningBook};
 
 mod core;
 mod coupling;
@@ -72,25 +73,9 @@ fn main() {
     // gui::launch::launch(maybe_white_engine, maybe_black_engine);
     let mut board = crate::engine::game::board::Board::new();
     let _ = board.load_start_pos();
-    let moves = [
-        "e2e4", "f7f6", "d2d3", "g7g5"
-    ];
-    for mv_str in moves.iter() {
-        let mv = crate::engine::game::r#move::Move::from_uci(&board, mv_str);
-        board.make_move(mv, false);
-        println!(
-            "{}\nMove: {}  Eval: {}\n",
-            board.to_string(),
-            mv_str,
-            board.evaluate()
-        );
-    }
-    let mut searcher = searcher::Searcher::new();
-    searcher.start_search(&mut board);
-    std::thread::sleep(Duration::from_millis(1000));
-    searcher.end_search();
-    // println!("{}", searcher.flush_log());
-    let (e, m) = searcher.bests();
-    println!("{:?}", (e, m.to_uci()))
-
+    let mut book = OpeningBook::new(opening_book::BOOK);
+    let mv = book.try_get_book_move(&mut board, 0.5);
+    dbg!(mv);
 }
+
+// Good position to test as it exceeds open: position startpos moves e2e4 e7e5 b1c3 f8c5 g1f3 d7d6

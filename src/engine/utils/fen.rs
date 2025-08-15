@@ -18,7 +18,7 @@ impl Board {
     */
     pub fn current_fen(&mut self, always_show_ep: bool) -> String {
         let mut fen = String::new();
-        for rank in 7..=0 {
+        for rank in (0..8).rev() {
             let mut num_empty_files = 0;
             for file in 0..8 {
                 let i = Coord::from((file, rank)).index();
@@ -44,7 +44,7 @@ impl Board {
             }
         }
 
-        fen.push_str(&format!("{}", self.white_to_move));
+        fen.push_str(&format!(" {}", self.white_to_move.then(|| 'w').unwrap_or('b')));
         let white_kingside = (self.state.castling_rights & 1) == 1;
         let white_queenside = (self.state.castling_rights >> 1 & 1) == 1;
         let black_kingside = (self.state.castling_rights >> 2 & 1) == 1;
