@@ -48,7 +48,6 @@ impl Brain {
             is_quitting: Arc::new(Mutex::new(bool::default())),
         };
 
-
         spawn_search_thread(
             Arc::clone(&brain.board),
             Arc::clone(&brain.searcher),
@@ -108,7 +107,8 @@ impl Brain {
         }
 
         let min_think_time = 50.0_f32.min(my_time_remaining_ms as f32 * 0.25);
-        Ok(min_think_time.max(think_time_ms).ceil() as i32)
+        let chosen_time_ms = min_think_time.max(think_time_ms).ceil() as i32;
+        Ok(chosen_time_ms)
     }
 
     pub fn think_timed(&mut self, time_ms: i32) -> Result<(), String> {
@@ -139,7 +139,10 @@ impl Brain {
         Ok(board.to_string())
     }
 
-    pub fn set_on_move_chosen<S: super::driver::SenderLike + Send + Sync + 'static>(&self, sender: S) {
+    pub fn set_on_move_chosen<S: super::driver::SenderLike + Send + Sync + 'static>(
+        &self,
+        sender: S,
+    ) {
         let on_move_chosen = Arc::clone(&self.on_move_chosen);
 
         let mut callback_lock = on_move_chosen.lock().unwrap();
@@ -217,9 +220,11 @@ fn spawn_search_thread(
             if let Ok(mut s) = searcher.lock() {
                 if let Ok(mut b) = board.lock() {
                     s.start_search(&mut b, time_ms);
-                    
+
                     if let Some(callback) = &*on_move_chosen.lock().unwrap() {
-                        callback(s.bests().1.to_uci().replace("=", ""));
+                        if let Some((_, best_move)) = s.bests() {
+                            callback(best_move.to_uci().replace("=", ""));
+                        }
                     }
                 }
             }

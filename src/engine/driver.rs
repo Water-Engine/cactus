@@ -8,7 +8,7 @@ use std::io::{BufRead, Write};
 use std::path::PathBuf;
 use std::sync::mpsc::{Receiver, Sender};
 use std::sync::{Arc, Mutex};
-use std::{env, io, thread};
+use std::{env, i32, io, thread};
 
 use directories::BaseDirs;
 
@@ -49,14 +49,38 @@ impl SenderLike for StdoutSender {
 }
 
 impl CactusEngine {
+    pub fn new<S: SenderLike + Send + Sync + 'static>(sender: S) -> Self {
+        let log_path: PathBuf = if let Some(base_dirs) = BaseDirs::new() {
+            let cactus_dir = base_dirs.data_local_dir().join("Cactus");
+            let _ = fs::create_dir_all(&cactus_dir);
+            cactus_dir.join("cactus.log")
+        } else if let Ok(current_dir) = env::current_dir() {
+            current_dir.join("cactus.log")
+        } else {
+            PathBuf::from("cactus.log")
+        };
+
+        let brain = Brain::new().unwrap();
+        let player = Arc::new(Mutex::new(brain));
+        player.lock().unwrap().set_on_move_chosen(sender);
+
+        let engine = Self {
+            player: player,
+            log: File::create(log_path).ok(),
+            position_loaded: false,
+        };
+
+        engine
+    }
+
     /// For use with the games gui with thread safe logic
     pub fn spawn_threaded() -> EngineHandle {
         let (cmd_sender, cmd_receiver) = std::sync::mpsc::channel::<String>();
         let (response_sender, response_receiver) = std::sync::mpsc::channel::<String>();
 
         thread::spawn(move || {
-            let mut engine = CactusEngine::default();
-            engine.run(cmd_receiver, response_sender);
+            let mut engine = CactusEngine::new(response_sender.clone());
+            engine.run(cmd_receiver, response_sender.clone());
         });
 
         EngineHandle {
@@ -77,7 +101,7 @@ impl CactusEngine {
     /// For use in non-gui environments. Simply a command line engine
     pub fn start() {
         let stdin = io::stdin();
-        let mut engine = CactusEngine::default();
+        let mut engine = CactusEngine::new(StdoutSender);
 
         for line in stdin.lock().lines() {
             match line {
@@ -163,32 +187,6 @@ impl CactusEngine {
     }
 }
 
-impl Default for CactusEngine {
-    fn default() -> Self {
-        let log_path: PathBuf = if let Some(base_dirs) = BaseDirs::new() {
-            let cactus_dir = base_dirs.data_local_dir().join("Cactus");
-            let _ = fs::create_dir_all(&cactus_dir);
-            cactus_dir.join("cactus.log")
-        } else if let Ok(current_dir) = env::current_dir() {
-            current_dir.join("cactus.log")
-        } else {
-            PathBuf::from("cactus.log")
-        };
-
-        let brain = Brain::new().unwrap();
-        let player = Arc::new(Mutex::new(brain));
-        player.lock().unwrap().set_on_move_chosen(StdoutSender);
-
-        let engine = Self {
-            player: player,
-            log: File::create(log_path).ok(),
-            position_loaded: false,
-        };
-
-        engine
-    }
-}
-
 // Helper IMPL
 impl CactusEngine {
     fn process_position_cmd(&mut self, message: &str) -> Result<String, String> {
@@ -254,12 +252,13 @@ impl CactusEngine {
             let increment_black_ms =
                 try_get_labeled_value_int(message, "binc", &GO_LABELS).unwrap_or(0);
 
-            think_time_ms = player.choose_think_time(
+            let suggested = player.choose_think_time(
                 time_remaining_white_ms,
                 time_remaining_black_ms,
                 increment_white_ms,
                 increment_black_ms,
             )?;
+            think_time_ms = (suggested == 0).then(|| i32::MAX).unwrap_or(suggested);
         }
         player.think_timed(think_time_ms)?;
         self.position_loaded = false;

@@ -26,7 +26,7 @@ pub struct Searcher {
     is_playing_white: bool,
     best_move_this_iteration: Move,
     best_eval_this_iteration: i32,
-    best_move: Move,
+    best_move: Option<Move>,
     best_eval: i32,
     has_searched_at_least_one_move: bool,
     search_canceled: bool,
@@ -71,10 +71,8 @@ impl Searcher {
 
     pub fn start_search(&mut self, board: &mut Board, time_ms: i32) {
         self.best_eval_this_iteration = 0;
-        self.best_eval = 0;
-
         self.best_move_this_iteration = Move::null();
-        self.best_move = Move::null();
+        self.best_move = None;
 
         self.is_playing_white = board.white_to_move;
 
@@ -89,10 +87,22 @@ impl Searcher {
 
         self.naive_search(board);
 
-        if self.best_move.is_null() {
-            let (moves, _) = board.generate_moves(false);
-            self.best_move = moves[0];
+        // Verify legality of best move
+        if let Some(proposed_best) = self.best_move {
+            println!("{}", &proposed_best.to_uci());
+            board.make_move(proposed_best, true);
+            board.make_null_move();
+            if board.calculate_in_check_state() {
+                self.best_move = None;
+                self.best_eval = 0;
+                if let Err(e) = board.load_start_pos() {
+                    self.debug_info.push_str(&e);
+                }
+            }
+            board.unmake_null_move();
+            board.unmake_move(proposed_best, true);
         }
+
         self.search_canceled = false;
     }
 
@@ -100,8 +110,12 @@ impl Searcher {
         self.search_canceled = true;
     }
 
-    pub fn bests(&self) -> (i32, Move) {
-        (self.best_eval, self.best_move)
+    pub fn bests(&self) -> Option<(i32, Move)> {
+        if self.best_move.is_none() {
+            None
+        } else {
+            Some((self.best_eval, self.best_move.unwrap()))
+        }
     }
 
     pub fn flush_log(&mut self) -> String {
@@ -125,12 +139,28 @@ impl Searcher {
             false,
             0,
         );
-        self.best_move = moves[0];
+
+        if moves.len() == 0 {
+            self.best_move = None;
+            self.best_eval = 0;
+            return;
+        }
+
         for mv in &moves {
             if self.search_canceled || start_time.elapsed() >= self.search_timer.time_limit {
                 break;
             }
             board.make_move(*mv, true);
+            board.make_null_move();
+
+            if board.calculate_in_check_state() {
+                // Our king is in check
+                board.unmake_null_move();
+                board.unmake_move(*mv, true);
+                continue;
+            }
+
+            board.unmake_null_move();
 
             // Legal responses?
             let (mut opponent_moves, _) = board.generate_moves(false);
@@ -157,28 +187,17 @@ impl Searcher {
                     .white_to_move
                     .then(|| POSITIVE_INFINITY)
                     .unwrap_or(NEGATIVE_INFINITY);
-                self.best_move = *mv;
+                self.best_move = Some(*mv);
                 break;
             }
 
             let eval = board.evaluate();
             if self.best_eval > eval {
                 self.best_eval = eval;
-                self.best_move = *mv;
+                self.best_move = Some(*mv);
             }
 
             board.unmake_move(*mv, true);
-        }
-
-        // Verify legality of best move
-        let best_move = self.best_move;
-        if !best_move.is_null() {
-            board.make_move(best_move, true);
-            if board.calculate_in_check_state() {
-                self.best_move = Move::default();
-                self.best_eval = 0;
-            }
-            board.unmake_move(best_move, true);
         }
     }
 }
@@ -216,7 +235,7 @@ pub struct SearchDiagnostics {
 pub struct SearchTimer {
     pub iteration_timer: Instant,
     pub total_timer: Instant,
-    pub time_limit: Duration
+    pub time_limit: Duration,
 }
 
 impl Default for SearchTimer {

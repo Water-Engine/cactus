@@ -70,12 +70,15 @@ fn main() {
         }
     }
 
-    // gui::launch::launch(maybe_white_engine, maybe_black_engine);
-    let mut board = crate::engine::game::board::Board::new();
-    let _ = board.load_start_pos();
-    let mut book = OpeningBook::new(opening_book::BOOK);
-    let mv = book.try_get_book_move(&mut board, 0.5);
-    dbg!(mv);
+    gui::launch::launch(maybe_white_engine, maybe_black_engine);
+    // let mut board = crate::engine::game::board::Board::new();
+    // let _ = board.load_start_pos();
+    // let mut book = OpeningBook::new(opening_book::BOOK);
+    // let mv = book.try_get_book_move(&mut board, 0.5);
+    // dbg!(mv);
 }
 
 // Good position to test as it exceeds open: position startpos moves e2e4 e7e5 b1c3 f8c5 g1f3 d7d6
+
+// M1 position: position startpos moves e2e4 f7f6 b1c3 g7g5
+// No legal moves for black position: position startpos moves e2e4 f7f6 b1c3 g7g5 d1h5
