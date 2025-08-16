@@ -199,37 +199,53 @@ fn spawn_search_thread(
     on_move_chosen: Arc<Mutex<Option<Box<dyn Fn(String) + Send + Sync>>>>,
 ) {
     std::thread::spawn(move || {
-        loop {
-            if *is_quitting.lock().unwrap() {
-                break;
+    loop {
+        let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+            if *is_quitting.lock().unwrap_or_else(|e| e.into_inner()) {
+                return;
             }
 
             let (lock, cvar) = &*request;
-            let mut req = lock.lock().unwrap();
-            while !req.ready && !*is_quitting.lock().unwrap() {
-                req = cvar.wait(req).unwrap();
+            let mut req = lock.lock().unwrap_or_else(|e| e.into_inner());
+            while !req.ready && !*is_quitting.lock().unwrap_or_else(|e| e.into_inner()) {
+                req = cvar.wait(req).unwrap_or_else(|e| e.into_inner());
             }
-
-            if *is_quitting.lock().unwrap() {
-                break;
+            if *is_quitting.lock().unwrap_or_else(|e| e.into_inner()) {
+                return;
             }
 
             let time_ms = req.time_ms;
             req.ready = false;
+            drop(req);
 
-            if let Ok(mut s) = searcher.lock() {
-                if let Ok(mut b) = board.lock() {
-                    s.start_search(&mut b, time_ms);
-
-                    if let Some(callback) = &*on_move_chosen.lock().unwrap() {
-                        if let Some((_, best_move)) = s.bests() {
-                            callback(best_move.to_uci().replace("=", ""));
+            let best_move_str = {
+                let mut maybe_best = None;
+                if let Ok(mut s) = searcher.lock() {
+                    if let Ok(mut b) = board.lock() {
+                        s.start_search(&mut b, time_ms);
+                        if let Some((_, best)) = s.bests() {
+                            maybe_best = Some(best.to_uci().replace("=", ""));
                         }
                     }
                 }
+                maybe_best
+            };
+
+            if let Some(best_move_str) = best_move_str {
+                if let Ok(cb_guard) = on_move_chosen.lock() {
+                    if let Some(cb) = &*cb_guard {
+                        cb(best_move_str);
+                    }
+                }
             }
+        }));
+
+        if let Err(err) = result {
+            eprintln!("Search thread panicked: {:?}", err);
+            break;
         }
-    });
+    }
+});
 }
 
 struct SearchRequest {

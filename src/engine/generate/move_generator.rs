@@ -272,7 +272,7 @@ impl MoveGenerator {
     }
 
     fn generate_pawn_moves(&mut self, board: &Board, moves: &mut Vec<Move>) {
-        let push_dir = board.white_to_move.then(|| 1).unwrap_or(-1);
+        let push_dir = board.white_to_move.then(|| -1).unwrap_or(1);
         let push_offset = push_dir * 8;
 
         let friendly_pawn_piece =

@@ -139,11 +139,11 @@ impl CactusEngine {
             }
             Some(val) if val == "position".to_string() => {
                 let result = self.process_position_cmd(&cmd);
-                self.log(result.unwrap_or_else(|e| e))
+                self.log(result.unwrap_or_else(|e| format!("{e}\n")))
             }
             Some(val) if val == "go".to_string() => {
                 let result = self.process_go_command(&cmd);
-                self.log(result.unwrap_or_else(|e| e))
+                self.log(result.unwrap_or_else(|e| format!("{e}\n")))
             }
             Some(val) if val == "stop".to_string() => {
                 if let Ok(brain) = self.player.lock() {
@@ -222,7 +222,7 @@ impl CactusEngine {
 
                 self.position_loaded = true;
                 return Ok(format!(
-                    "Make moves after setting position: {}",
+                    "Make moves after setting position: {}\n",
                     move_list.len()
                 ));
             }
@@ -262,7 +262,7 @@ impl CactusEngine {
         }
         player.think_timed(think_time_ms)?;
         self.position_loaded = false;
-        Ok(format!("Thinking for: {} ms.", think_time_ms))
+        Ok(format!("Thinking for: {} ms.\n", think_time_ms))
     }
 }
 

@@ -89,7 +89,6 @@ impl Searcher {
 
         // Verify legality of best move
         if let Some(proposed_best) = self.best_move {
-            println!("{}", &proposed_best.to_uci());
             board.make_move(proposed_best, true);
             board.make_null_move();
             if board.calculate_in_check_state() {
