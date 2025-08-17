@@ -1,6 +1,4 @@
-use std::time::Duration;
-
-// #![allow(unused)]
+#![allow(unused)]
 use crate::coupling::{EngineHandle, external::ExternalEngine};
 use crate::engine::brain;
 use crate::engine::driver::CactusEngine;
@@ -61,24 +59,9 @@ fn main() {
             maybe_white_engine = engine;
         }
     } else if use_cactus {
-        println!("Starting GUI with internal Cactus engine...");
-        let engine = CactusEngine::spawn_threaded();
-        if is_engine_black {
-            maybe_black_engine = Some(engine);
-        } else {
-            maybe_white_engine = Some(engine);
-        }
+        println!("This does not work, get your hands on the source code and fix the mess that is the engine folder.");
+        return;
     }
 
     gui::launch::launch(maybe_white_engine, maybe_black_engine);
-    // let mut board = crate::engine::game::board::Board::new();
-    // let _ = board.load_start_pos();
-    // let mut book = OpeningBook::new(opening_book::BOOK);
-    // let mv = book.try_get_book_move(&mut board, 0.5);
-    // dbg!(mv);
 }
-
-// Good position to test as it exceeds open: position startpos moves e2e4 e7e5 b1c3 f8c5 g1f3 d7d6
-
-// M1 position: position startpos moves e2e4 f7f6 b1c3 g7g5
-// No legal moves for black position: position startpos moves e2e4 f7f6 b1c3 g7g5 d1h5
