@@ -28,7 +28,6 @@ fn main() {
                 i += 2;
             }
             _ => {
-                eprintln!("Ignoring unknown argument: {}", args[i]);
                 i += 1;
             }
         }
