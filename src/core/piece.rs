@@ -198,10 +198,6 @@ impl PieceImages {
         self.textures.get(&kind).expect("Unknown PieceKind")
     }
 
-    pub fn get_capture(&self, kind: PieceKind) -> &TextureHandle {
-        self.captures.get(&kind).expect("Unknown PieceKind")
-    }
-
     fn svg_to_image(svg_data: &[u8], size: f32) -> ColorImage {
         let opt = usvg::Options::default();
         let rtree = usvg::Tree::from_data(svg_data, &opt).expect("Invalid SVG");

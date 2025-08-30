@@ -1,12 +1,12 @@
 use crate::core::{board::*, piece::*};
 use crate::coupling::EngineHandle;
-use crate::gui::{DEFAULT_APP_SIZE, DEFAULT_BOARD_SIZE, DEFAULT_PIECE_SIZE};
+use crate::gui::{DEFAULT_BOARD_SIZE, DEFAULT_PIECE_SIZE};
 
 use eframe::egui::{self, Color32, Context, IconData, Painter, Pos2, Vec2};
 use eframe::{App, Frame};
 use rodio::{OutputStream, OutputStreamBuilder};
 
-static ICON: &[u8] = include_bytes!("../../assets/icon.png");
+static ICON: &[u8] = include_bytes!("../../assets/cactus-icon.png");
 
 pub struct Cactus {
     pub board: Board,
@@ -89,7 +89,8 @@ pub fn launch(white_engine: Option<EngineHandle>, black_engine: Option<EngineHan
 
     let options = eframe::NativeOptions {
         viewport: egui::ViewportBuilder {
-            min_inner_size: Some(Vec2::from((DEFAULT_APP_SIZE, DEFAULT_BOARD_SIZE))),
+            min_inner_size: Some(Vec2::from((DEFAULT_BOARD_SIZE, DEFAULT_BOARD_SIZE))),
+            max_inner_size: Some(Vec2::from((DEFAULT_BOARD_SIZE, DEFAULT_BOARD_SIZE))),
             resizable: Some(false),
             fullscreen: Some(false),
             maximize_button: Some(false),
@@ -98,6 +99,7 @@ pub fn launch(white_engine: Option<EngineHandle>, black_engine: Option<EngineHan
         },
         ..Default::default()
     };
+
     eframe::run_native(
         "Cactus",
         options,

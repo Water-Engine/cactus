@@ -1,66 +1,37 @@
-#![allow(unused)]
 use crate::coupling::{EngineHandle, external::ExternalEngine};
-use crate::engine::brain;
-use crate::engine::driver::CactusEngine;
-use crate::engine::search::searcher;
-use crate::engine::utils::opening_book::{self, OpeningBook};
 
 mod core;
 mod coupling;
-mod engine;
 mod gui;
 mod moves;
 
 fn main() {
     let args: Vec<String> = std::env::args()
         .skip(1)
-        .map(|s| s.trim().to_lowercase())
+        .map(|s| s.trim().to_string())
         .collect();
-
-    let mut use_stockfish = false;
-    let mut use_cactus = false;
-    let mut is_engine_black = true;
-    let mut run_gui = true;
-
-    match args.as_slice() {
-        [engine] if engine == "engine" => {
-            run_gui = false;
-        }
-
-        [engine, engine_name] if engine == "engine" => {
-            use_cactus = engine_name == "cactus";
-            use_stockfish = engine_name == "stockfish";
-        }
-
-        [engine, engine_name, color] if engine == "engine" => {
-            use_cactus = engine_name == "cactus";
-            use_stockfish = engine_name == "stockfish";
-            is_engine_black = color != "white";
-        }
-
-        _ => {}
-    }
-
-    if !run_gui {
-        println!("Running cactus client...");
-        CactusEngine::start();
-        return;
-    }
 
     let mut maybe_white_engine: Option<EngineHandle> = None;
     let mut maybe_black_engine: Option<EngineHandle> = None;
 
-    if use_stockfish {
-        println!("Starting GUI with external Stockfish engine...");
-        let engine = ExternalEngine::spawn_threaded("stockfish/stockfish-windows-x86-64.exe").ok();
-        if is_engine_black {
-            maybe_black_engine = engine;
-        } else {
-            maybe_white_engine = engine;
+    let mut i = 0;
+    while i < args.len() {
+        match args[i].as_str() {
+            "white" if i + 1 < args.len() => {
+                let path = &args[i + 1];
+                maybe_white_engine = ExternalEngine::spawn_threaded(path).ok();
+                i += 2;
+            }
+            "black" if i + 1 < args.len() => {
+                let path = &args[i + 1];
+                maybe_black_engine = ExternalEngine::spawn_threaded(path).ok();
+                i += 2;
+            }
+            _ => {
+                eprintln!("Ignoring unknown argument: {}", args[i]);
+                i += 1;
+            }
         }
-    } else if use_cactus {
-        println!("This does not work, get your hands on the source code and fix the mess that is the engine folder.");
-        return;
     }
 
     gui::launch::launch(maybe_white_engine, maybe_black_engine);

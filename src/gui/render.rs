@@ -1,6 +1,6 @@
 use eframe::egui::{
-    Align, Align2, Color32, Context, FontId, Id, ImageButton, Layout, Pos2, Rect, Response,
-    RichText, Stroke, StrokeKind, Ui, Vec2, Window, vec2,
+    Align, Align2, Color32, Context, CornerRadius, FontId, Frame, ImageButton, Layout, Pos2, Rect,
+    Response, RichText, Vec2, Window, vec2,
 };
 
 use crate::{
@@ -9,7 +9,7 @@ use crate::{
         board::State,
         piece::{PieceKind, PieceType},
     },
-    gui::{DEFAULT_PANEL_SIZE, launch::Cactus},
+    gui::launch::Cactus,
 };
 
 impl Cactus {
@@ -121,7 +121,6 @@ impl Cactus {
         }
 
         self.render_promotion_popup(ctx);
-        self.render_side_panel(ctx, rect);
         if self.show_game_over_popup {
             self.render_game_over_popup(ctx);
         }
@@ -192,85 +191,6 @@ impl Cactus {
         }
     }
 
-    pub fn render_side_panel(&self, ctx: &eframe::egui::Context, board_rect: Rect) {
-        let panel_width = DEFAULT_PANEL_SIZE;
-        let spacing = 12.0;
-        let panel_pos = Pos2::new(board_rect.right() + DEFAULT_PANEL_SIZE, board_rect.top());
-
-        eframe::egui::Area::new(Id::new("custom_right_panel"))
-            .fixed_pos(panel_pos)
-            .show(ctx, |ui| {
-                let eval_bar_height = 150.0;
-                let eval_bar_width = 24.0;
-
-                ui.set_width(panel_width);
-                ui.add_space(spacing);
-                ui.vertical_centered(|ui| {
-                    self.render_player_label_and_captures(ui, Color::Black);
-                });
-
-                ui.add_space(spacing);
-                ui.vertical_centered(|ui| {
-                    self.render_evaluation_bar(ui, eval_bar_width, eval_bar_height);
-                });
-
-                ui.add_space(spacing);
-                ui.with_layout(Layout::bottom_up(eframe::egui::Align::Center), |ui| {
-                    self.render_player_label_and_captures(ui, Color::White);
-                });
-            });
-    }
-
-    fn render_player_label_and_captures(&self, ui: &mut Ui, color: Color) {
-        let player = match color {
-            Color::White => &self.board.players.white,
-            Color::Black => &self.board.players.black,
-        };
-
-        let name = match color {
-            Color::White => "White",
-            Color::Black => "Black",
-        };
-
-        let text_color = Color32::from_rgb(230, 230, 230);
-
-        ui.vertical_centered(|ui| {
-            ui.label(
-                RichText::new(format!("{name}: {}", player.score))
-                    .strong()
-                    .color(text_color)
-                    .size(32.0),
-            );
-            if !player.captures.is_empty() {
-                ui.horizontal_wrapped(|ui| {
-                    for piece in &player.captures {
-                        let tex = self.images.get_capture(*piece);
-                        ui.image(tex);
-                    }
-                });
-            }
-        });
-    }
-
-    fn render_evaluation_bar(&self, ui: &mut Ui, width: f32, height: f32) {
-        let bar_size = Vec2::new(width, height);
-        let (rect, _) = ui.allocate_exact_size(bar_size, eframe::egui::Sense::hover());
-
-        let painter = ui.painter();
-        let outline = Stroke::new(1.0, Color32::GRAY);
-        painter.rect_stroke(rect, 2.0, outline, StrokeKind::Middle);
-
-        let eval = 0.68;
-        let fill_height = bar_size.y * eval;
-
-        let fill_rect = Rect::from_min_size(
-            rect.left_bottom() - vec2(0.0, fill_height),
-            vec2(bar_size.x, fill_height),
-        );
-
-        painter.rect_filled(fill_rect, 0.0, Color32::WHITE);
-    }
-
     pub fn render_game_over_popup(&mut self, ctx: &Context) {
         if !self.show_game_over_popup {
             return;
@@ -293,6 +213,11 @@ impl Cactus {
             .collapsible(false)
             .resizable(false)
             .default_pos([0.0, 0.0])
+            .frame(Frame {
+                fill: Color32::from_rgba_unmultiplied(0, 0, 0, 200),
+                corner_radius: CornerRadius::same(6),
+                ..Default::default()
+            })
             .show(ctx, |ui| {
                 ui.with_layout(Layout::top_down_justified(Align::Center), |ui| {
                     ui.label(

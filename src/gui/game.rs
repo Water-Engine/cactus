@@ -34,6 +34,10 @@ impl Cactus {
 
         self.clear_selection = false;
 
+        if self.show_game_over_popup {
+            return response;
+        }
+
         let pointer = ctx.input(|i| i.pointer.clone());
         if let Some(pos) = pointer.interact_pos() {
             if pointer.primary_pressed() {
