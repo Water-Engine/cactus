@@ -4,8 +4,8 @@ A chess client written in Rust.
 # Getting Started
 To build and run cactus, install the rust toolchain and run:
 ```shell
-git clone https://github.com/Water-Engine/water.git
-cd water
+git clone https://github.com/Water-Engine/cactus.git
+cd cactus
 make run-release
 ```
 To run the gui with the water engine (or any other external engine), its path must be given as a command line arg. The general format is `<binary> [white "path_to_engine"] [black "path_to_engine"]`. If the white or black options are not given or the paths are not valid, then it will default to a normal player.
@@ -21,7 +21,7 @@ cargo run --release -- white path/to/water.exe black path/to/stockfish.exe
 - GNU Make ()
 - [cloc](https://github.com/AlDanial/cloc) (for cloc make target > optional)
 
-# Building water
+# Building cactus
 The project's build system uses cargo with make existing as a helper. Below is a list of targets with their requirements where applicable:
 
 ## Build Specific Targets
