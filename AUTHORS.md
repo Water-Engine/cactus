@@ -1,4 +1,0 @@
-# Founders
-Trevor Swan
-
-# Contributors
