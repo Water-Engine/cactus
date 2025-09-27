@@ -27,6 +27,8 @@
             buildInputs = [
               rustToolchain
               just
+              # temporary (for testing)
+              cutechess
             ];
           };
       }
