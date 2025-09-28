@@ -4,4 +4,5 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
+libcactus = { path = "../libcactus"}
 owo-colors = "4.2.2"

@@ -1,4 +1,5 @@
 use crate::cli_utils::cactus_toml_exists;
+
 use owo_colors::OwoColorize;
 use std::{env, fs, path::Path};
 
@@ -18,7 +19,7 @@ pub fn initialize_cactus_resources() {
         );
         eprintln!(
             "{}",
-            "-> reinitialization is not supported, please edit the existing file instead."
+            "-> Reinitialization is not supported, please edit the existing file instead."
                 .bright_red()
         );
         return;

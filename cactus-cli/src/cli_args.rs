@@ -4,11 +4,12 @@ mod cli_runner;
 mod cli_status;
 mod cli_validator;
 
-use cli_helper::display_help;
-use cli_initializer::initialize_cactus_resources;
-use cli_runner::run_matchup_from_cactus_toml;
-use cli_status::show_current_matchup_status;
-use cli_validator::validate_cactus_toml;
+use crate::cli_args::cli_helper::display_help;
+use crate::cli_args::cli_initializer::initialize_cactus_resources;
+use crate::cli_args::cli_runner::run_matchup_from_cactus_toml;
+use crate::cli_args::cli_status::show_current_matchup_status;
+use crate::cli_args::cli_validator::validate_cactus_toml;
+
 use owo_colors::OwoColorize;
 use std::process::exit;
 
