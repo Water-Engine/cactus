@@ -43,8 +43,14 @@ The project's build system uses cargo with just. Below is a list of targets with
 | `fmt`       |   -   | Formats the rust code using cargo fmt                                             |
 | `fmt-check` | fc    | Checks the formatting of all files                                                |
 
-`build-*` recipes use `cargo build` under the hood, hence you can pass any of cargo's arguments, by default no arguments are passed.
+`build-*` recipes use `cargo build` under the hood, hence you can pass any of cargo's arguments, by default no arguments
+are passed.
 A useful one is `--release` or `-r` to build with release mode, since by default builds are in debug mode.
+
+> [!IMPORTANT]
+> Note that when using the `run-*` commands, a temporary `test` folder, relative to the justfile, will be created to store
+all the necessary configs.
+> This is to avoid polluting the project space, and ambiguity in execution of justfile compared to cargo.
  
 # Usage
 

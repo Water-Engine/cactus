@@ -29,7 +29,7 @@ build-all args='':
 # =====> Program Runners <===== #
 # Run CLI with arguments
 run-cli args='help':
-    cargo run --package cactus-cli --release -- {{args}}
+    mkdir -p test/cli && cd test/cli && cargo run --package cactus-cli --release -- {{args}}
 # Run GUI
 run-gui:
     cargo run --package cactus-gui --release
