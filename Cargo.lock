@@ -13,6 +13,9 @@ dependencies = [
 [[package]]
 name = "cactus-gui"
 version = "0.1.0"
+dependencies = [
+ "libcactus",
+]
 
 [[package]]
 name = "equivalent"

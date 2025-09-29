@@ -2,6 +2,8 @@
 name = "cactus-cli"
 version = "0.1.0"
 edition = "2024"
+license = "GPLv3"
+repository = "https://github.com/Water-Engine/cactus"
 
 [dependencies]
 libcactus = { path = "../libcactus"}
