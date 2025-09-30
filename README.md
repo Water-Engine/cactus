@@ -55,12 +55,14 @@ all the necessary configs.
 # Usage
 
 ## `cactus-cli`
-The CLI provides the following commands:
-| **Command** | Description                                        |
-|:------------|:---------------------------------------------------|
-| `init`      | Initialize a new cactus.toml template              |
-| `run`       | Run the matchup defined in cactus.toml             |
-| `status`    | Show current matchup status                        |
-| `validate`  | Validate cactus.toml to prevent misconfigured runs |
-| `help`      | Show help message and version info                 |
-
+The guide below shows the usage of `cactus-cli`:
+| **Command** | **Flags** | Description                                          |
+|:------------|:---------:|:-----------------------------------------------------|
+|             | --help    | Show context sensitive help                          |
+|             | --info    | Show program information                             |
+| `init`      | -         | Initialize a new cactus.toml template                |
+| `run`       |           | Run the matchup defined in cactus.toml               |
+|             | --cwd     | Set a working directory, exports will be stored here |
+|             | --config  | Import config from specified cactus.toml             |
+|             | --dry     | Dry run to prevent misconfigured runs                |
+|             | --profile | Run a profile specified in cactus.toml               |

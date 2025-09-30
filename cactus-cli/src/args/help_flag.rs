@@ -37,6 +37,24 @@ pub fn display_global_help() {
 }
 
 pub fn display_run_command_help() {
+    // displaying cli info at top
+    println!(
+        "{}",
+        format!(
+            "{}: A CLI tool to run and manage chess engine tournaments\n",
+            env!("CARGO_PKG_NAME").bright_green().bold()
+        )
+        .bright_white()
+        .bold()
+    );
+
+    // Display Usage
+    print!("{}", "Usage: ".bright_yellow().bold());
+    print!("{}", "cactus-cli run ".bright_green().bold());
+    println!("{}", "[FLAGS]\n".green());
+
+    // Display Flags
+    println!("{}", "Flags: ".bright_yellow().bold());
     // working directory flag
     print!("{}", "    --cwd".bright_green().bold());
     println!("             Set a working directory, exports will be stored here.");

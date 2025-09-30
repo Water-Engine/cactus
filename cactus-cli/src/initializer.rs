@@ -12,7 +12,7 @@ pub fn initialize_cactus_resources() {
         eprintln!(
             "{}",
             format!(
-                "-> cactus.toml already exists at: {}",
+                "-> Error: cactus.toml already exists at: {}",
                 dir.display().bright_yellow()
             )
             .bright_red()
