@@ -1,1 +1,1 @@
-pub mod cactus_toml_parser;
+pub mod config_parser;

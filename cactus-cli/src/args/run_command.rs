@@ -8,9 +8,8 @@ use crate::utils::make_path_abs;
 #[derive(Debug)]
 pub struct RunFlags {
     pub cwd: PathBuf,
-    pub config: PathBuf,
     pub dry_run: bool,
-    pub profile: String,
+    pub event: String,
 }
 
 impl RunFlags {
@@ -19,9 +18,8 @@ impl RunFlags {
         let mut iter = args.iter();
 
         let mut cwd = None;
-        let mut config = None;
         let mut dry_run = false;
-        let mut profile = None;
+        let mut event = None;
 
         while let Some(arg) = iter.next() {
             match arg.as_str() {
@@ -32,18 +30,11 @@ impl RunFlags {
                         return None;
                     }
                 },
-                "--config" => match iter.next() {
-                    Some(val) => config = Some(val.as_str()),
-                    None => {
-                        eprintln!("{}", "-> Error: --config requires a value".red());
-                        return None;
-                    }
-                },
                 "--dry" => dry_run = true,
-                "--profile" => match iter.next() {
-                    Some(val) => profile = Some(val.as_str()),
+                "--event" => match iter.next() {
+                    Some(val) => event = Some(val.as_str()),
                     None => {
-                        eprintln!("{}", "-> Error: --profile requires a value".red());
+                        eprintln!("{}", "-> Error: --event requires a value".red());
                         return None;
                     }
                 },
@@ -67,11 +58,8 @@ impl RunFlags {
 
         Some(Self {
             cwd: cwd.map(make_path_abs).unwrap_or(base.clone()),
-            config: config
-                .map(make_path_abs)
-                .unwrap_or_else(|| base.join("cactus.toml")),
             dry_run,
-            profile: profile
+            event: event
                 .map(String::from)
                 .unwrap_or_else(|| "default".to_string()),
         })

@@ -4,7 +4,7 @@ pub mod run_command;
 
 use crate::args::{help_flag::display_global_help, info_flag::display_program_info};
 use crate::initializer::initialize_cactus_resources;
-use crate::runner::run_matchup_from_cactus_toml;
+use crate::runner::run_event_from_cactus_toml;
 
 use owo_colors::OwoColorize;
 use std::process::exit;
@@ -25,8 +25,8 @@ pub fn argument_parser() {
 
     match arg.as_str() {
         // Call resp functions for commands
-        "init" => initialize_cactus_resources(),
-        "run" => run_matchup_from_cactus_toml(args),
+        "init" => initialize_cactus_resources(args),
+        "run" => run_event_from_cactus_toml(args),
         // Handling global flags
         "--help" => display_global_help(),
         "--info" => display_program_info(),

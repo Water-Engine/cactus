@@ -15,7 +15,7 @@ pub fn display_global_help() {
     // Display Usage
     print!("{}", "Usage: ".bright_yellow().bold());
     print!("{}", "cactus-cli ".bright_green().bold());
-    println!("{}", "[COMMANDS] [FLAGS]\n".green());
+    println!("{}", "[COMMANDS] <FLAGS> [ARGS]\n".green());
 
     // Display commands
     println!("{}", "Commands: ".bright_yellow().bold());
@@ -57,14 +57,11 @@ pub fn display_run_command_help() {
     println!("{}", "Flags: ".bright_yellow().bold());
     // working directory flag
     print!("{}", "    --cwd".bright_green().bold());
-    println!("             Set a working directory, exports will be stored here.");
-    // get-config flag
-    print!("{}", "    --config".bright_green().bold());
-    println!("          Import config from specified cactus.toml");
+    println!("             Set a working directory");
     // Validate flag
     print!("{}", "    --dry".bright_green().bold());
     println!("             Dry run to prevent misconfigured runs");
-    // profiles flag
-    print!("{}", "    --profile".bright_green().bold());
-    println!("         Run a profile specified in cactus.toml");
+    // event flag
+    print!("{}", "    --event".bright_green().bold());
+    println!("           Run a event specified in cactus.toml");
 }

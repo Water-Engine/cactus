@@ -14,21 +14,21 @@ alias fc := fmt-check
 
 # =====> Package Builders <===== #
 #Build cactus cli
-build-cli +args:
+build-cli +args='':
     cargo build --package cactus-cli {{args}}
 #Build cactus gui
-build-gui +args:
+build-gui +args='':
     cargo build --package cactus-gui {{args}}
 #Build libcactus
-build-lib +args:
+build-lib +args='':
     cargo build --package libcactus {{args}}
 #Build all packages
-build-all +args:
+build-all +args='':
     cargo build {{args}}
 
 # =====> Program Runners <===== #
 # Run CLI with arguments
-run-cli +args:
+run-cli +args='':
     mkdir -p test/cli && cd test/cli && cargo run --package cactus-cli --release -- {{args}}
 # Run GUI
 run-gui:

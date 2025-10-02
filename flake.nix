@@ -2,39 +2,53 @@
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
     flake-utils.url = "github:numtide/flake-utils";
+    rust-overlay.url = "github:oxalica/rust-overlay";
   };
+
   outputs =
     {
       nixpkgs,
       flake-utils,
+      rust-overlay,
       ...
     }:
     flake-utils.lib.eachDefaultSystem (
       system:
       let
-        pkgs = import nixpkgs { inherit system; };
+        overlays = [ rust-overlay.overlays.default ];
+        pkgs = import nixpkgs {
+          inherit system overlays;
+        };
+
+        # Latest stable Rust with all standard components
+        rustToolchain = pkgs.rust-bin.stable.latest.minimal.override {
+          extensions = [
+            "rust-analyzer"
+            "clippy"
+            "rustfmt"
+          ];
+        };
       in
       {
         devShells.default =
           with pkgs;
           mkShell {
             buildInputs = [
-              # dependencies
-              cargo
-              just
-              # dev tools
-              rust-analyzer
-              clippy
-              rustfmt
+              # Rust toolchain with all components
+              rustToolchain
 
-              # Testing tools
+              # Build tools
+              just
+
+              # Testing materials
               # Engines
               stockfish
               lc0
-              # Runners
+              # other runners
               fastchess
               cutechess
             ];
+
           };
       }
     );
