@@ -19,8 +19,6 @@
         pkgs = import nixpkgs {
           inherit system overlays;
         };
-
-        # Latest stable Rust with all standard components
         rustToolchain = pkgs.rust-bin.stable.latest.minimal.override {
           extensions = [
             "rust-analyzer"
@@ -28,28 +26,34 @@
             "rustfmt"
           ];
         };
+        rustPlatform = pkgs.makeRustPlatform {
+          cargo = rustToolchain;
+          rustc = rustToolchain;
+        };
+        cactus = pkgs.callPackage ./default.nix { inherit rustPlatform; };
       in
       {
-        devShells.default =
-          with pkgs;
-          mkShell {
-            buildInputs = [
-              # Rust toolchain with all components
-              rustToolchain
+        packages = {
+          default = cactus.all;
+          cli = cactus.cli;
+          gui = cactus.gui;
+        };
 
-              # Build tools
-              just
+        devShells.default = pkgs.mkShell {
+          packages = with pkgs; [
+            # Dependencies
+            rustToolchain
+            just
 
-              # Testing materials
-              # Engines
-              stockfish
-              lc0
-              # other runners
-              fastchess
-              cutechess
-            ];
-
-          };
+            # Testing materials
+            # Engines
+            stockfish
+            lc0
+            # other runners
+            fastchess
+            cutechess
+          ];
+        };
       }
     );
 }

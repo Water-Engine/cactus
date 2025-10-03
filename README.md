@@ -3,66 +3,43 @@ Cactus is a framework providing a gui, cli and a library for playing chess and d
 It is designed to be lightweight and performant providing a flexible foundation for both developers and players.  
 Cactus is written in rust and uses [raylib](https://www.raylib.com/index.html) for the gui.  
 
-Cactus provides following packages:
-- `cactus-cli` enables stress-testing of chess engines, offering multiple tournament formats and easy export of match results.
-- `cactus-gui` allows you to play PvP, Bot vs Player, or Bot vs Bot matches, and provides tools for analyzing games.
-- `libcactus` serves as the core library, powering both the CLI and GUI applications.  
-
 # Getting Started
-To build and run cactus, install the rust toolchain and run:
-```shell
-git clone https://github.com/Water-Engine/cactus.git
-cd cactus
-git switch rewrite
-just build-all 
+
+> [!NOTE]
+> Cactus project has not made a stable release yet, and is under active development.
+> Code may change in backwards incompatible ways.
+
+Cactus provides following packages:
+- [`cactus-cli`](./cactus-cli/README.md) enables stress-testing of chess engines, offering multiple tournament formats and easy export of match results.
+- [`cactus-gui`](./cactus-gui/README.md) allows you to play PvP, Bot vs Player, or Bot vs Bot matches, and provides tools for analyzing games.
+- [`libcactus`](./libcactus/README.md) serves as the core library, powering both the CLI and GUI applications.  
+
+## Installation Guide
+
+### Using `cargo`
+To directly install packages provided by `cactus` using `cargo` from Github run:
 ```
-You can also build specific components individually:
-```shell
-just build-cli
-just build-gui
-just build-lib
+cargo install --git https://github.com/water-engine/cactus --path <package>
 ```
 
-# Dependencies
-- [cargo](https://github.com/rust-lang/cargo)
-- [just](https://github.com/casey/just)
+### Using `nix` package manager
+`nix` users can follow the instructions below:
+1. Add the project as a flake input to your system/home-manager flake:
+```nix
+# in flake.nix
+{
+  # other inputs ...
+  inputs.cactus.url = "github:water-engine/cactus";
+}
+```
+2. After passing your inputs parameters, you can install `cactus` by adding the following to your `environment.systemPackages` or `home.packages`:
+```nix
+# in your configuration.nix or home.nix
+inputs.cactus.packages.${system}.default # Provides both the cli and gui
+inputs.cactus.packages.${system}.cli # Provides the cli
+inputs.cactus.packages.${system}.gui # Provides the gui
+```
 
-# Building Cactus
-The project's build system uses cargo with just. Below is a list of targets with their aliases:
+### Building from source
+Check [Contributing.md](/.github/CONTRIBUTING.md#building-cactus-from-source) for a detailed guide on this.
 
-# Build Specific Targets
-| **Recipe**  | Alias | Description                                                                       |
-|:------------|:-----:|:----------------------------------------------------------------------------------|
-| `build-cli` | bc    | Builds the `cactus-cli` package                                                   |
-| `build-gui` | bg    | Builds the `cactus-gui` package                                                   |
-| `build-lib` | bl    | Builds the `libcactus` library                                                    |
-| `build-all` | ba    | Builds the all the project packages                                               |
-| `run-cli`   | rc    | Compiles and runs the cli. You can optionally pass the commands for `cactus-cli`  |
-| `run-gui`   | rg    | Compiles and opens the gui                                                        |
-| `clean`     | cln   | Cleans all the build artifacts                                                    |
-| `fmt`       |   -   | Formats the rust code using cargo fmt                                             |
-| `fmt-check` | fc    | Checks the formatting of all files                                                |
-
-`build-*` recipes use `cargo build` under the hood, hence you can pass any of cargo's arguments, by default no arguments
-are passed.
-A useful one is `--release` or `-r` to build with release mode, since by default builds are in debug mode.
-
-> [!IMPORTANT]
-> Note that when using the `run-*` commands, a temporary `test` folder, relative to the justfile, will be created to store
-all the necessary configs.
-> This is to avoid polluting the project space, and ambiguity in execution of justfile compared to cargo.
- 
-# Usage
-
-## `cactus-cli`
-The guide below shows the usage of `cactus-cli`:
-| **Command** | **Flags** | Description                                          |
-|:------------|:---------:|:-----------------------------------------------------|
-|             | --help    | Show context sensitive help                          |
-|             | --info    | Show program information                             |
-| `init`      | -         | Initialize a new cactus.toml template                |
-| `run`       |           | Run the matchup defined in cactus.toml               |
-|             | --cwd     | Set a working directory, exports will be stored here |
-|             | --config  | Import config from specified cactus.toml             |
-|             | --dry     | Dry run to prevent misconfigured runs                |
-|             | --profile | Run a profile specified in cactus.toml               |
