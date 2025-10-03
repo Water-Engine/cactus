@@ -1,48 +1,68 @@
-# cactus [![Rust](https://img.shields.io/static/v1?label=Rust&message=2024&labelColor=gray&color=F1592A)](https://github.com/rust-lang/rust) [![License](https://img.shields.io/github/license/Water-Engine/cactus)](LICENSE) [![LOC](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/Water-Engine/cactus/loc/.github/loc_badge.json)](https://github.com/Water-Engine/cactus/actions/workflows/loc.yml) [![Last commit](https://img.shields.io/github/last-commit/Water-Engine/cactus)](https://github.com/Water-Engine/cactus) [![Formatting](https://github.com/Water-Engine/cactus/actions/workflows/format.yml/badge.svg)](https://github.com/Water-Engine/cactus/actions/workflows/format.yml)
-A chess client written in Rust.
+# Cactus
+Cactus is a framework providing a gui, cli and a library for playing chess and developing utilities for it.  
+It is designed to be lightweight and performant providing a flexible foundation for both developers and players.  
+Cactus is written in rust and uses [raylib](https://www.raylib.com/index.html) for the gui.  
+
+Cactus provides following packages:
+- `cactus-cli` enables stress-testing of chess engines, offering multiple tournament formats and easy export of match results.
+- `cactus-gui` allows you to play PvP, Bot vs Player, or Bot vs Bot matches, and provides tools for analyzing games.
+- `libcactus` serves as the core library, powering both the CLI and GUI applications.  
 
 # Getting Started
 To build and run cactus, install the rust toolchain and run:
 ```shell
 git clone https://github.com/Water-Engine/cactus.git
 cd cactus
-make run-release
+git switch rewrite
+just build-all 
 ```
-To run the gui with the water engine (or any other external engine), its path must be given as a command line arg. The general format is `<binary> [white "path_to_engine"] [black "path_to_engine"]`. If the white or black options are not given or the paths are not valid, then it will default to a normal player.
-
-Examples:
+You can also build specific components individually:
 ```shell
-cargo run --release -- white path/to/water.exe
-cargo run --release -- white path/to/water.exe black path/to/stockfish.exe
+just build-cli
+just build-gui
+just build-lib
 ```
 
 # Dependencies
-- [Cargo](https://doc.rust-lang.org/beta/book/ch01-01-installation.html)
-- GNU Make ()
-- [cloc](https://github.com/AlDanial/cloc) (for cloc make target > optional)
+- [cargo](https://github.com/rust-lang/cargo)
+- [just](https://github.com/casey/just)
 
-# Building cactus
-The project's build system uses cargo with make existing as a helper. Below is a list of targets with their requirements where applicable:
+# Building Cactus
+The project's build system uses cargo with just. Below is a list of targets with their aliases:
 
-## Build Specific Targets
-- `default`: Builds the release configuration (default)
-- `install`: Alias for release (to be updated)
-- `all`: Builds all optimization configurations for the project (release, and debug)
-- `release`: Builds the project with all optimizations
-- `debug`: Builds the project with no optimization, defining both PROFILE and DEBUG
-- `run`: Alias for run-release
-- `run-release`: Build and run the release binary
-- `run-debug`: Build and run the debug binary
-- `fmt`: Format all Rust source and header files using `cargo fmt`
-- `fmt-check`: Validates Rust formatting rules without altering project files
-- `clean`: Remove object files, dependency files, and binaries
+# Build Specific Targets
+| **Recipe**  | Alias | Description                                                                       |
+|:------------|:-----:|:----------------------------------------------------------------------------------|
+| `build-cli` | bc    | Builds the `cactus-cli` package                                                   |
+| `build-gui` | bg    | Builds the `cactus-gui` package                                                   |
+| `build-lib` | bl    | Builds the `libcactus` library                                                    |
+| `build-all` | ba    | Builds the all the project packages                                               |
+| `run-cli`   | rc    | Compiles and runs the cli. You can optionally pass the commands for `cactus-cli`  |
+| `run-gui`   | rg    | Compiles and opens the gui                                                        |
+| `clean`     | cln   | Cleans all the build artifacts                                                    |
+| `fmt`       |   -   | Formats the rust code using cargo fmt                                             |
+| `fmt-check` | fc    | Checks the formatting of all files                                                |
 
-## General Targets
-- `cloc`: Count the lines of code in the project's relevant directories
-- `help`: Print this help menu
+`build-*` recipes use `cargo build` under the hood, hence you can pass any of cargo's arguments, by default no arguments
+are passed.
+A useful one is `--release` or `-r` to build with release mode, since by default builds are in debug mode.
 
-# Motivation
-Cactus is a minimal rust-based chess gui built for playing basic games against chess engines. It was created with the intent of being the engine itself, but a lack of understanding of chess engine mechanics resulted in a dead project. As a result, it has been stripped to just be the GUI. After Water is completed, we expect Cactus to grow into something like a 'match manager', allowing you to stress test the engine against humans, itself, or other engines. For now, it is a non-resizable square window and will remain as such until Water is complete.
+> [!IMPORTANT]
+> Note that when using the `run-*` commands, a temporary `test` folder, relative to the justfile, will be created to store
+all the necessary configs.
+> This is to avoid polluting the project space, and ambiguity in execution of justfile compared to cargo.
+ 
+# Usage
 
-# For Developers
-Contributing guidelines, information on tests, formatting, and profiling can be found in [CONTRIBUTING.md](.github/CONTRIBUTING.md).
+## `cactus-cli`
+The guide below shows the usage of `cactus-cli`:
+| **Command** | **Flags** | Description                                          |
+|:------------|:---------:|:-----------------------------------------------------|
+|             | --help    | Show context sensitive help                          |
+|             | --info    | Show program information                             |
+| `init`      | -         | Initialize a new cactus.toml template                |
+| `run`       |           | Run the matchup defined in cactus.toml               |
+|             | --cwd     | Set a working directory, exports will be stored here |
+|             | --config  | Import config from specified cactus.toml             |
+|             | --dry     | Dry run to prevent misconfigured runs                |
+|             | --profile | Run a profile specified in cactus.toml               |

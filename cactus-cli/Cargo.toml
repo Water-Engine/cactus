@@ -1,0 +1,12 @@
+[package]
+name = "cactus-cli"
+version = "0.1.0"
+edition = "2024"
+license = "GPLv3"
+repository = "https://github.com/Water-Engine/cactus"
+
+[dependencies]
+indicatif = "0.18.0"
+libcactus = { path = "../libcactus"}
+owo-colors = "4.2.2"
+which = "8.0.0"
