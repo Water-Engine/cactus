@@ -1,16 +1,10 @@
 use crate::utils::cactus_toml_exists;
-
 use owo_colors::OwoColorize;
-use std::{env, fs, path::Path, path::PathBuf};
+use std::{fs, path::PathBuf};
 
-pub fn initialize_cactus_resources(args: Vec<String>) {
-    let working_dir = args
-        .get(3)
-        .map(PathBuf::from)
-        .unwrap_or_else(|| env::current_dir().expect("Failed to get current directory"));
-
+pub fn initialize_cactus_resources(working_dir: PathBuf) {
     // Check if cactus.toml already exists
-    if cactus_toml_exists() {
+    if cactus_toml_exists(&working_dir) {
         eprintln!(
             "{}",
             format!(
@@ -27,8 +21,7 @@ pub fn initialize_cactus_resources(args: Vec<String>) {
         return;
     }
 
-    // Use pwd as "path" to create cactus.toml
-    let path = Path::new("cactus.toml");
+    let path = working_dir.join("cactus.toml");
 
     // Default cactus.toml template
     let template = r#"# This is a starter template for running cactus.

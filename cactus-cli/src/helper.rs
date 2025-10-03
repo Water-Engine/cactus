@@ -1,4 +1,24 @@
+// This module provides functions for printing global help/usage information
+// and program metadata (name, version, license, repository, git hash).
+
 use owo_colors::OwoColorize;
+
+const NAME: &str = env!("CARGO_PKG_NAME");
+const VERSION: &str = env!("CARGO_PKG_VERSION");
+const LICENSE: &str = env!("CARGO_PKG_LICENSE");
+const REPOSITORY: &str = env!("CARGO_PKG_REPOSITORY");
+const GIT_HASH: &str = env!("GIT_HASH");
+
+pub fn display_program_info() {
+    print!("{}", NAME.bright_green().bold());
+    print!("{}", format!(" v{}", VERSION).bright_yellow());
+    println!("{}", format!(" git({})", GIT_HASH).bright_blue());
+    println!(
+        "Distributed under {} by Cactus developers,",
+        LICENSE.yellow()
+    );
+    println!("for more info: {}", REPOSITORY.green());
+}
 
 pub fn display_global_help() {
     // displaying cli info at top
@@ -6,7 +26,7 @@ pub fn display_global_help() {
         "{}",
         format!(
             "{}: A CLI tool to run and manage chess engine tournaments\n",
-            env!("CARGO_PKG_NAME").bright_green().bold()
+            NAME.bright_green().bold()
         )
         .bright_white()
         .bold()
@@ -42,7 +62,7 @@ pub fn display_run_command_help() {
         "{}",
         format!(
             "{}: A CLI tool to run and manage chess engine tournaments\n",
-            env!("CARGO_PKG_NAME").bright_green().bold()
+            NAME.bright_green().bold()
         )
         .bright_white()
         .bold()

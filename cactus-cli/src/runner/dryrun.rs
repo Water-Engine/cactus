@@ -1,5 +1,4 @@
-use crate::args::run_command::RunFlags;
-
+use crate::runner::RunFlags;
 use libcactus::config_parser;
 use std::path::Path;
 use which::which;
