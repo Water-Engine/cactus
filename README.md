@@ -43,3 +43,5 @@ inputs.cactus.packages.${system}.gui # Provides the gui
 ### Building from source
 Check [Contributing.md](/.github/CONTRIBUTING.md#building-cactus-from-source) for a detailed guide on this.
 
+## License
+Distributed under AGPL-3.0-or-later - See [LICENSE](./LICENSE) and [ATTRIBUTIONS.md](./.github/ATTRIBUTIONS.md)

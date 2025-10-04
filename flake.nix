@@ -44,6 +44,11 @@
             # Dependencies
             rustToolchain
             just
+            # Raylib dependencies
+            glfw
+            cmake
+            clang
+            wayland
 
             # Testing materials
             # Engines
@@ -53,6 +58,16 @@
             fastchess
             cutechess
           ];
+          LD_LIBRARY_PATH =
+            with pkgs;
+            lib.makeLibraryPath [
+              libGL
+              xorg.libXrandr
+              xorg.libXinerama
+              xorg.libXcursor
+              xorg.libXi
+            ];
+          LIBCLANG_PATH = "${pkgs.libclang.lib}/lib";
         };
       }
     );
