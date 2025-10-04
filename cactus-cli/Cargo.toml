@@ -1,9 +1,10 @@
 [package]
 name = "cactus-cli"
 version = "0.1.0"
-edition = "2024"
-license = "GPLv3"
-repository = "https://github.com/Water-Engine/cactus"
+authors.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
 
 [dependencies]
 indicatif = "0.18.0"
