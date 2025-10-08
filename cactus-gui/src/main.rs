@@ -1,5 +1,5 @@
 /*
-    cactus-cli: A GUI that allows you to host PvP, BotvP, or BotvBot matches and provides tools for analyzing games.
+    cactus-gui: A GUI that allows you to host PvP, BotvP, or BotvBot matches and provides tools for analyzing games.
     Copyright (C) 2025 Cactus Developers
 
     This program is free software: you can redistribute it and/or modify
@@ -16,16 +16,12 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/#AGPL>.
 */
 
-use raylib::prelude::*;
+use crate::interface::build_interface;
+
+mod interface;
+mod resources;
+mod utils;
 
 fn main() {
-    let (mut rl, thread) = raylib::init().size(640, 480).title("Cactus").build();
-
-    while !rl.window_should_close() {
-        let mut d = rl.begin_drawing(&thread);
-
-        d.clear_background(Color::WHITE);
-        d.draw_text("Hello, world!", 12, 12, 20, Color::BLACK);
-        d.draw_rectangle(50, 50, 120, 80, Color::RED);
-    }
+    build_interface();
 }

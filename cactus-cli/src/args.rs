@@ -1,7 +1,7 @@
 use crate::helper::{display_global_help, display_program_info, display_run_command_help};
 use crate::initializer::initialize_cactus_resources;
 use crate::runner::run_event_from_cactus_toml;
-use crate::utils::make_path_abs;
+use crate::utils::{get_config_dir, make_path_abs};
 use owo_colors::OwoColorize;
 use std::path::PathBuf;
 use std::{env, process::exit};
@@ -59,10 +59,9 @@ impl RunFlags {
         Ok(Self {
             cwd: cwd.map(make_path_abs).unwrap_or(base),
             dry_run,
-            event:
-                event
-                    .map(String::from)
-                    .unwrap_or_else(|| "default".to_string()),
+            event: event
+                .map(String::from)
+                .unwrap_or_else(|| "default".to_string()),
         })
     }
 }
@@ -83,16 +82,7 @@ pub fn argument_parser() {
 
     match arg.as_str() {
         // Call resp functions for commands
-        "init" => {
-            // This variable looks for the 3rd argument provided to the cli.
-            // Reads it as path and uses it as working directory, and
-            // defaults to $pwd if nothing is provided
-            let working_dir = args
-                .get(2)
-                .map(|s| make_path_abs(s))
-                .unwrap_or_else(|| env::current_dir().expect("Failed to get current directory"));
-            initialize_cactus_resources(working_dir)
-        }
+        "init" => initialize_cactus_resources(args),
         "run" => run_event_from_cactus_toml(args),
         // Handling global flags
         "--help" => display_global_help(),

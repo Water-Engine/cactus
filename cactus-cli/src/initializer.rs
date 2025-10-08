@@ -1,8 +1,18 @@
 use crate::utils::cactus_toml_exists;
+use crate::utils::{get_config_dir, make_path_abs};
 use owo_colors::OwoColorize;
-use std::{fs, path::PathBuf};
+use std::fs;
 
-pub fn initialize_cactus_resources(working_dir: PathBuf) {
+pub fn initialize_cactus_resources(args: Vec<String>) {
+    let working_dir = args
+        .get(2)
+        .map(|s| make_path_abs(s))
+        .unwrap_or_else(|| get_config_dir());
+
+    if !working_dir.exists() {
+        fs::create_dir_all(&working_dir).expect("Failed to create config directory");
+    }
+
     // Check if cactus.toml already exists
     if cactus_toml_exists(&working_dir) {
         eprintln!(
